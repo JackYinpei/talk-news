@@ -45,7 +45,6 @@ export default function NewsFeed({ onArticleSelect }) {
   const fetchNews = useCallback(async (currentPage) => {
     if (currentPage === 1) {
       setLoading(true);
-      setArticles([]);
     } else {
       setLoadingMore(true);
     }
@@ -67,22 +66,29 @@ export default function NewsFeed({ onArticleSelect }) {
       
       if (!newsData.articles || newsData.articles.length === 0) {
         setHasMore(false);
-        return;
-      }
+      } else {
+        const newArticles = newsData.articles;
+        
+        setArticles(prev => {
+          const existingUrls = new Set(prev.map(a => a.url));
+          const uniqueNewArticles = newArticles.filter(a => !existingUrls.has(a.url));
+          return [...prev, ...uniqueNewArticles];
+        });
 
-      const newArticles = newsData.articles;
-      setArticles(prev => [...prev, ...newArticles]);
-      if (newArticles.length < PAGE_SIZE || (page * PAGE_SIZE >= newsData.totalResults)) {
-        setHasMore(false);
+        if (newArticles.length < PAGE_SIZE || (page * PAGE_SIZE >= newsData.totalResults)) {
+          setHasMore(false);
+        }
+        
+        translateArticleTitles(newArticles);
       }
-      
-      translateArticleTitles(newArticles);
-
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (currentPage === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
   }, [targetLanguage, translateArticleTitles, page]);
 
@@ -91,10 +97,12 @@ export default function NewsFeed({ onArticleSelect }) {
       setLoading(false);
       return;
     }
+    setArticles([]);
     setPage(1);
     setHasMore(true);
     fetchNews(1);
-  }, [targetLanguage, nativeLanguage, fetchNews]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetLanguage, nativeLanguage]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
@@ -105,10 +113,14 @@ export default function NewsFeed({ onArticleSelect }) {
   return (
     <div className="h-full bg-gray-100 p-4 rounded-lg overflow-y-auto">
       <h2 className="text-xl font-bold mb-4 text-gray-800">News Feed</h2>
-      {loading && <>{[...Array(5)].map((_, i) => <NewsCardSkeleton key={i} />)}</>}
+      
+      {loading && articles.length === 0 && (
+        <>{[...Array(5)].map((_, i) => <NewsCardSkeleton key={i} />)}</>
+      )}
+
       {error && <p className="text-red-500 bg-red-100 p-3 rounded-lg">{error}</p>}
       
-      {!loading && !error && (
+      {!error && (
         <div>
           {articles.map((article) => (
             <NewsCard key={article.url} article={article} onClick={() => onArticleSelect(article)} />
@@ -116,7 +128,7 @@ export default function NewsFeed({ onArticleSelect }) {
         </div>
       )}
 
-      {!loading && hasMore && (
+      {hasMore && !loading && (
         <div className="text-center mt-4">
           <button
             onClick={handleLoadMore}
