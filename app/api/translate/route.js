@@ -1,11 +1,13 @@
 // app/api/translate/route.js
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
-// This is a mock translation endpoint.
-// In a real application, you would integrate a translation service like Google Translate API.
-const mockTranslate = (text, targetLang) => {
-  return `[${targetLang}] ${text}`;
-};
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions:{
+    baseURL: process.env.GEMINI_BASE_URL
+  }
+});
 
 export async function POST(request) {
   try {
@@ -15,13 +17,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required parameters: text and targetLang' }, { status: 400 });
     }
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    const prompt = `Translate the following text to ${targetLang}: ${text}`;
 
-    const translatedText = mockTranslate(text, targetLang);
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: prompt,
+    });
+
+    const translatedText = response.text;
 
     return NextResponse.json({ translation: translatedText });
   } catch (error) {
+    console.error('Error during translation:', error);
     return NextResponse.json({ error: 'An unexpected error occurred during translation.' }, { status: 500 });
   }
 }
