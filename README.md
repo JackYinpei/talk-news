@@ -1,36 +1,8 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+这个项目是我刚刚使用nextjs init的项目模版，新项目是想使用Gemini API 和 newsapi.org 的API接口实现一个可以和AI 
+  实时聊新闻的网页，要实现响应式布局，用户第一次进来的时候要选一下native language 
+  然后以及想学的语言，然后主页的左边是newsapi列出来的新闻卡片列表，卡片中展示的是用户想学的语言的新闻标题以及调用google Translate 
+  或者其他机器翻译接口返回的用户母语的新闻标题（但是这个标题的字体大小和颜色要相对想学的语言不要那么喧宾夺主）然后当用户点击其中的
+  一个卡片的时候，右边有这个新闻的详细内容（但是不能占用太多空间，下面要留出来用户对话窗口）然后AI 
+  会给用户简单介绍一下这个新闻，然后提几个问题（AI 同时要返回音频这样用户就可以播放了）然后用户也要可以发送音频或者文字\
+  你根据上面我的这个需求整理一下需求文档，写到CLAUDE.md 中，前端使用的是nextjs 
+  还有就是你写代码的时候一定一定要遵循奥卡姆剃刀原理，如无必要勿增实体，以及代码要符合软件标准，要高内聚低耦合。
