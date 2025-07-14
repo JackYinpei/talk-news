@@ -7,6 +7,16 @@ import NewsCardSkeleton from './NewsCardSkeleton';
 
 const PAGE_SIZE = 10;
 
+// 语言名字到代号的映射
+const languageNameToCode = {
+  'English': 'en',
+  '中文': 'zh',
+  'Spanish': 'es',
+  'French': 'fr',
+  'German': 'de',
+  'Japanese': 'ja',
+};
+
 export default function NewsFeed({ onArticleSelect }) {
   const { targetLanguage, nativeLanguage } = useLanguage();
   const [articles, setArticles] = useState([]);
@@ -55,7 +65,10 @@ export default function NewsFeed({ onArticleSelect }) {
       if (!apiKey || apiKey === 'YOUR_NEWS_API_KEY') {
         throw new Error('News API key is not configured. Please add NEXT_PUBLIC_NEWS_API_KEY to your .env.local file.');
       }
-      const newsUrl = `https://newsapi.org/v2/top-headlines?language=${targetLanguage}&apiKey=${apiKey}&page=${currentPage}&pageSize=${PAGE_SIZE}`;
+      
+      // 将语言名字转换为代号
+      const targetLanguageCode = languageNameToCode[targetLanguage] || 'en';
+      const newsUrl = `https://newsapi.org/v2/top-headlines?language=${targetLanguageCode}&apiKey=${apiKey}&page=${currentPage}&pageSize=${PAGE_SIZE}`;
       const newsResponse = await fetch(newsUrl);
 
       if (!newsResponse.ok) {

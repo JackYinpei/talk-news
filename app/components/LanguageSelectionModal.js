@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 // A simplified list of languages for the demo.
 const languages = [
   { code: 'en', name: 'English' },
-  { code: 'zh', name: 'Chinese (Simplified)' },
+  { code: 'zh', name: '中文' },
   { code: 'es', name: 'Spanish' },
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
@@ -15,8 +15,8 @@ const languages = [
 
 export default function LanguageSelectionModal() {
   const { isLanguageModalOpen, handleLanguageSelection } = useLanguage();
-  const [nativeLang, setNativeLang] = useState('en');
-  const [targetLang, setTargetLang] = useState('fr');
+  const [nativeLang, setNativeLang] = useState('English');
+  const [targetLang, setTargetLang] = useState('French');
 
   if (!isLanguageModalOpen) {
     return null;
@@ -42,7 +42,7 @@ export default function LanguageSelectionModal() {
               className="w-full p-3 border rounded-lg"
             >
               {languages.map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
+                <option key={lang.code} value={lang.name}>{lang.name}</option>
               ))}
             </select>
           </div>
@@ -55,7 +55,7 @@ export default function LanguageSelectionModal() {
               className="w-full p-3 border rounded-lg"
             >
               {languages.map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
+                <option key={lang.code} value={lang.name}>{lang.name}</option>
               ))}
             </select>
           </div>
