@@ -152,9 +152,17 @@ export default function ArticleChatView({ article, onClose }) {
       nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
 
       if (!clientRef.current) {
-        clientRef.current = new GoogleGenAI({
-          apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY,
-        });
+        const response = await fetch('/api/tmptoken');
+        const tokenData = await response.json();
+        if (response.ok) {
+          // The user's example used token.name, but the API returns { token: '...' }
+          // The correct usage with the token is to pass it in the apiKey field.
+          clientRef.current = new GoogleGenAI({
+            apiKey: tokenData.token,
+          });
+        } else {
+          throw new Error(tokenData.error || 'Failed to fetch token');
+        }
       }
 
       setRealtimeStatus('实时音频已初始化');

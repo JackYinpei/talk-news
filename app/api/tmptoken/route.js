@@ -1,13 +1,37 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleAuth } from 'google-auth-library';
+import { NextResponse } from 'next/server';
 
-const client = new GoogleGenAI({});
-const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
-  const token: AuthToken = await client.authTokens.create({
-    config: {
-      uses: 1, // The default
-      expireTime: expireTime // Default is 30 mins
-      newSessionExpireTime: new Date(Date.now() + (1 * 60 * 1000)), // Default 1 minute in the future
-      httpOptions: {apiVersion: 'v1alpha'},
-    },
+async function createToken() {
+  const auth = new GoogleAuth({
+    scopes: 'https://www.googleapis.com/auth/cloud-platform',
   });
+  const client = await auth.getClient();
+  const projectId = await auth.getProjectId();
+  const url = `https://generativelanguage.googleapis.com/v1beta/projects/${projectId}/locations/global:generateToken`;
+
+  const res = await client.request({
+    url,
+    method: 'POST',
+    data: {
+      "model": "models/gemini-2.5-flash-preview-native-audio-dialog",
+      "role": "writer",
+      "uses": [
+        {
+          "permission": "any"
+        }
+      ]
+    }
+  });
+
+  return res.data;
+}
+
+export async function GET() {
+  try {
+    const token = await createToken();
+    return NextResponse.json(token);
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
