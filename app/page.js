@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import NewsFeed from './components/NewsFeed';
-import ArticleDetail from './components/ArticleDetail';
-import ChatWindow from './components/ChatWindow';
+import ArticleChatView from './components/ArticleChatView';
 import LanguageSelectionModal from './components/LanguageSelectionModal';
 
 export default function Home() {
@@ -28,15 +27,14 @@ export default function Home() {
 
         {/* Right Panel: Article and Chat */}
         <div
-          className={`h-full flex-col gap-4 md:w-2/3 lg:w-3/4 ${
+          className={`h-full flex-col md:w-2/3 lg:w-3/4 ${
             selectedArticle ? 'flex' : 'hidden md:flex'
           }`}
         >
-          <ArticleDetail
+          <ArticleChatView
             article={selectedArticle}
             onClose={handleCloseArticle}
           />
-          <ChatWindow article={selectedArticle} />
         </div>
       </main>
     </>
