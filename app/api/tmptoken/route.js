@@ -1,29 +1,30 @@
-import { GoogleAuth } from 'google-auth-library';
 import { NextResponse } from 'next/server';
 
-async function createToken() {
-  const auth = new GoogleAuth({
-    scopes: 'https://www.googleapis.com/auth/cloud-platform',
-  });
-  const client = await auth.getClient();
-  const projectId = await auth.getProjectId();
-  const url = `https://generativelanguage.googleapis.com/v1beta/projects/${projectId}/locations/global:generateToken`;
+import { GoogleGenAI, Modality } from '@google/genai';
 
-  const res = await client.request({
-    url,
-    method: 'POST',
-    data: {
-      "model": "models/gemini-2.5-flash-preview-native-audio-dialog",
-      "role": "writer",
-      "uses": [
-        {
-          "permission": "any"
+const client = new GoogleGenAI({});
+const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+async function createToken() {
+  const token = await client.authTokens.create({
+    config: {
+      uses: 1, // The default
+      expireTime: expireTime,
+      liveConnectConstraints: {
+        model: 'gemini-2.5-flash-preview-native-audio-dialog',
+        config: {
+          sessionResumption: {},
+          temperature: 0.7,
+          responseModalities: [Modality.AUDIO]
         }
-      ]
+      },
+      httpOptions: {
+        apiVersion: 'v1alpha'
+      }
     }
   });
-
-  return res.data;
+  console.log("What does the token looks like", token)
+  return token.name
 }
 
 export async function GET() {

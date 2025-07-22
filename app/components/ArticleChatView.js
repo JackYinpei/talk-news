@@ -154,11 +154,13 @@ export default function ArticleChatView({ article, onClose }) {
       if (!clientRef.current) {
         const response = await fetch('/api/tmptoken');
         const tokenData = await response.json();
+        
         if (response.ok) {
           // The user's example used token.name, but the API returns { token: '...' }
           // The correct usage with the token is to pass it in the apiKey field.
           clientRef.current = new GoogleGenAI({
-            apiKey: tokenData.token,
+            apiKey: tokenData,
+            httpOptions: { apiVersion: 'v1alpha' },
           });
         } else {
           throw new Error(tokenData.error || 'Failed to fetch token');
