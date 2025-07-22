@@ -61,11 +61,14 @@ export default function ArticleChatView({ article, onClose }) {
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+
+  // --- Realtime Audio State ---
   const [isRealtimeRecording, setIsRealtimeRecording] = useState(false);
   const isRecordingRef = useRef(false);
-  const [realtimeStatus, setRealtimeStatus] = useState('');
+  const [realtimeStatus, setRealtimeStatus] = useState('未初始化');
   const [realtimeError, setRealtimeError] = useState('');
-  
+  const [isMuted, setIsMuted] = useState(false);
+
   const recognitionRef = useRef(null);
   const clientRef = useRef(null);
   const sessionRef = useRef(null);
@@ -91,7 +94,6 @@ export default function ArticleChatView({ article, onClose }) {
         sessionRef.current = null;
       }
 
-      // Translate title
       const translateTitle = async () => {
         try {
           const response = await fetch('/api/translate', {
@@ -104,11 +106,10 @@ export default function ArticleChatView({ article, onClose }) {
           setTranslatedTitle(data.translation);
         } catch (error) {
           console.error('Title translation error:', error);
-          setTranslatedTitle(article.title); // Fallback to original title
+          setTranslatedTitle(article.title);
         }
       };
 
-      // Start chat automatically
       const startChat = async () => {
         setLoading(true);
         try {
@@ -126,13 +127,20 @@ export default function ArticleChatView({ article, onClose }) {
           setLoading(false);
         }
       };
-
+      
+      initRealtimeSession();
       translateTitle();
       startChat();
     }
   }, [article, nativeLanguage, targetLanguage]);
 
-  const initRealtimeAudio = async () => {
+  useEffect(() => {
+    if (outputNodeRef.current) {
+      outputNodeRef.current.gain.value = isMuted ? 0 : 1;
+    }
+  }, [isMuted]);
+
+  const initAudioContexts = () => {
     try {
       if (!inputAudioContextRef.current) {
         inputAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
@@ -150,40 +158,38 @@ export default function ArticleChatView({ article, onClose }) {
       }
       
       nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
-
-      if (!clientRef.current) {
-        const response = await fetch('/api/tmptoken');
-        const tokenData = await response.json();
-        
-        if (response.ok) {
-          // The user's example used token.name, but the API returns { token: '...' }
-          // The correct usage with the token is to pass it in the apiKey field.
-          clientRef.current = new GoogleGenAI({
-            apiKey: tokenData,
-            httpOptions: { apiVersion: 'v1alpha' },
-          });
-        } else {
-          throw new Error(tokenData.error || 'Failed to fetch token');
-        }
-      }
-
-      setRealtimeStatus('实时音频已初始化');
+      return true;
     } catch (error) {
-      console.error('初始化实时音频失败:', error);
-      setRealtimeError('初始化失败: ' + error.message);
+      console.error('Error initializing audio contexts:', error);
+      setRealtimeError('Failed to set up audio hardware: ' + error.message);
+      return false;
     }
   };
 
   const initRealtimeSession = async () => {
-    if (!clientRef.current) await initRealtimeAudio();
+    if (!initAudioContexts()) return;
 
     const model = 'gemini-2.5-flash-preview-native-audio-dialog';
 
     try {
-      sessionRef.current = await clientRef.current.live.connect({
+      setRealtimeStatus('获取安全令牌...');
+      const response = await fetch('/api/tmptoken');
+      const tokenData = await response.json();
+      if (!response.ok) {
+        throw new Error(tokenData.error || 'Failed to fetch token');
+      }
+      
+      const client = new GoogleGenAI({
+        apiKey: tokenData,
+        httpOptions: { apiVersion: 'v1alpha' },
+      });
+      clientRef.current = client;
+
+      setRealtimeStatus('正在连接到 AI...');
+      sessionRef.current = await client.live.connect({
         model: model,
         callbacks: {
-          onopen: () => setRealtimeStatus('连接已建立'),
+          onopen: () => setRealtimeStatus('连接已建立，请按开始会话'),
           onmessage: async (message) => {
             const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData;
             if (audio) {
@@ -222,7 +228,9 @@ export default function ArticleChatView({ article, onClose }) {
 
   const startRealtimeRecording = async () => {
     if (isRealtimeRecording) return;
-    if (!sessionRef.current) await initRealtimeSession();
+    if (!sessionRef.current || sessionRef.current.state === 'closed') {
+      await initRealtimeSession();
+    }
 
     inputAudioContextRef.current.resume();
     outputAudioContextRef.current.resume();
@@ -244,7 +252,7 @@ export default function ArticleChatView({ article, onClose }) {
       scriptProcessorNodeRef.current.connect(inputAudioContextRef.current.destination);
       isRecordingRef.current = true;
       setIsRealtimeRecording(true);
-      setRealtimeStatus('🔴 正在录音... 实时对话中');
+      setRealtimeStatus('🔴 实时对话中...');
     } catch (err) {
       console.error('开始录音时出错:', err);
       setRealtimeStatus(`错误: ${err.message}`);
@@ -253,7 +261,7 @@ export default function ArticleChatView({ article, onClose }) {
   };
 
   const stopRealtimeRecording = () => {
-    if (!isRealtimeRecording && !mediaStreamRef.current && !inputAudioContextRef.current) return;
+    if (!isRecordingRef.current && !mediaStreamRef.current) return;
     setRealtimeStatus('停止录音...');
     isRecordingRef.current = false;
     setIsRealtimeRecording(false);
@@ -267,14 +275,19 @@ export default function ArticleChatView({ article, onClose }) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
-    setRealtimeStatus('录音已停止，点击开始进行新的对话');
+    setRealtimeStatus('会话已停止');
   };
 
-  const resetRealtimeSession = () => {
-    sessionRef.current?.close();
-    sessionRef.current = null;
-    initRealtimeSession();
-    setRealtimeStatus('会话已重置');
+  const handleToggleConversation = () => {
+    if (isRealtimeRecording) {
+      stopRealtimeRecording();
+    } else {
+      startRealtimeRecording();
+    }
+  };
+
+  const handleToggleMute = () => {
+    setIsMuted(prev => !prev);
   };
 
   const handlePlayAudio = (text) => {
@@ -347,9 +360,18 @@ export default function ArticleChatView({ article, onClose }) {
         <div className="mb-4 p-3 bg-gray-100 rounded-lg flex-shrink-0">
           <h3 className="text-lg font-semibold mb-2 text-gray-700">实时语音对话</h3>
           <div className="flex gap-2 mb-2 flex-wrap">
-            <button onClick={resetRealtimeSession} disabled={isRealtimeRecording} className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-50 text-sm">重置会话</button>
-            <button onClick={startRealtimeRecording} disabled={isRealtimeRecording} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-sm">开始录音</button>
-            <button onClick={stopRealtimeRecording} disabled={!isRealtimeRecording} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm">停止录音</button>
+            <button 
+              onClick={handleToggleConversation} 
+              className={`px-3 py-1 text-white rounded text-sm ${isRealtimeRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+            >
+              {isRealtimeRecording ? '关闭会话' : '开始会话'}
+            </button>
+            <button 
+              onClick={handleToggleMute}
+              className={`px-3 py-1 rounded text-sm ${isMuted ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              {isMuted ? '取消静音' : '静音'}
+            </button>
           </div>
           <div className="text-sm text-gray-600">
             状态: {realtimeStatus}
