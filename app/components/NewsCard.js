@@ -3,10 +3,10 @@
 export default function NewsCard({ article, onClick }) {
   return (
     <div
-      className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer mb-4 flex items-start gap-4"
+      className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer mb-4 flow-root"
       onClick={onClick}
     >
-      <div className="w-24 h-24 flex-shrink-0">
+      <div className="w-24 h-24 flex-shrink-0 float-left mr-4 mb-2">
         {article.urlToImage ? (
           <img
             src={article.urlToImage}
@@ -19,12 +19,10 @@ export default function NewsCard({ article, onClick }) {
           </div>
         )}
       </div>
-      <div className="flex-grow">
-        <h3 className="text-lg font-bold text-gray-800">{article.title}</h3>
-        {article.translatedTitle && (
-          <p className="text-sm text-gray-500 mt-1">{article.translatedTitle}</p>
-        )}
-      </div>
+      <h3 className="text-lg font-bold text-gray-800">{article.title}</h3>
+      {article.translatedTitle && (
+        <p className="text-sm text-gray-500 mt-1">{article.translatedTitle}</p>
+      )}
     </div>
   );
 }
