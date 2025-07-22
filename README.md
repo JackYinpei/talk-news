@@ -1,5 +1,7 @@
 # Talk News
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FJackYinpei%2Ftalk-news)
+
 Talk News 是一款创新的语言学习应用，它将实时新闻阅读与互动式对话相结合，帮助用户在真实语境中学习和练习外语。
 
 ## 功能特性

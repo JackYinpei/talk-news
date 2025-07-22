@@ -4,27 +4,70 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import NewsCard from './NewsCard';
 import NewsCardSkeleton from './NewsCardSkeleton';
+import CategoryTabs from './CategoryTabs';
 
-const PAGE_SIZE = 10;
-
-// 语言名字到代号的映射
-const languageNameToCode = {
-  'English': 'en',
-  '中文': 'zh',
-  'Spanish': 'es',
-  'French': 'fr',
-  'German': 'de',
-  'Japanese': 'ja',
-};
+const categories = [
+  { categoryId: 'world', categoryName: 'World', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_vermont', categoryName: 'USA | Vermont', sourceLanguage: 'en' },
+  { categoryId: 'bitcoin', categoryName: 'Bitcoin', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_virginia', categoryName: 'USA | Virginia', sourceLanguage: 'en' },
+  { categoryId: 'economy', categoryName: 'Economy', sourceLanguage: 'en' },
+  { categoryId: 'cybersecurity', categoryName: 'Cybersecurity', sourceLanguage: 'en' },
+  { categoryId: 'colombia', categoryName: 'Colombia', sourceLanguage: 'es' },
+  { categoryId: 'china', categoryName: 'China', sourceLanguage: 'zh-Hans' },
+  { categoryId: 'japan', categoryName: 'Japan', sourceLanguage: 'ja' },
+  { categoryId: 'ai', categoryName: 'AI', sourceLanguage: 'en' },
+  { categoryId: 'taiwan', categoryName: 'Taiwan', sourceLanguage: 'zh-Hant' },
+  { categoryId: 'linux_oss', categoryName: 'Linux & OSS', sourceLanguage: 'en' },
+  { categoryId: 'estonia', categoryName: 'Estonia', sourceLanguage: 'et' },
+  { categoryId: 'bay', categoryName: 'Bay', sourceLanguage: 'en' },
+  { categoryId: 'switzerland_(de)', categoryName: 'Switzerland (DE)', sourceLanguage: 'de' },
+  { categoryId: 'germany_|_hesse', categoryName: 'Germany | Hesse', sourceLanguage: 'de' },
+  { categoryId: 'new_zealand', categoryName: 'New Zealand', sourceLanguage: 'en' },
+  { categoryId: 'canada', categoryName: 'Canada', sourceLanguage: 'en' },
+  { categoryId: 'science', categoryName: 'Science', sourceLanguage: 'en' },
+  { categoryId: 'slovenia', categoryName: 'Slovenia', sourceLanguage: 'sl' },
+  { categoryId: 'pakistan', categoryName: 'Pakistan', sourceLanguage: 'en' },
+  { categoryId: 'portugal', categoryName: 'Portugal', sourceLanguage: 'pt' },
+  { categoryId: 'apple', categoryName: 'Apple', sourceLanguage: 'en' },
+  { categoryId: 'europe', categoryName: 'Europe', sourceLanguage: 'en' },
+  { categoryId: 'finland', categoryName: 'Finland', sourceLanguage: 'fi' },
+  { categoryId: 'south_korea', categoryName: 'South Korea', sourceLanguage: 'ko' },
+  { categoryId: 'australia', categoryName: 'Australia', sourceLanguage: 'en' },
+  { categoryId: 'business', categoryName: 'Business', sourceLanguage: 'en' },
+  { categoryId: 'thailand', categoryName: 'Thailand', sourceLanguage: 'th' },
+  { categoryId: 'poland', categoryName: 'Poland', sourceLanguage: 'pl' },
+  { categoryId: 'usa', categoryName: 'USA', sourceLanguage: 'en' },
+  { categoryId: 'gaming', categoryName: 'Gaming', sourceLanguage: 'en' },
+  { categoryId: 'belgium', categoryName: 'Belgium', sourceLanguage: 'nl' },
+  { categoryId: 'ireland', categoryName: 'Ireland', sourceLanguage: 'en' },
+  { categoryId: 'ukraine', categoryName: 'Ukraine', sourceLanguage: 'uk' },
+  { categoryId: 'israel', categoryName: 'Israel', sourceLanguage: 'he' },
+  { categoryId: 'costa_rica', categoryName: 'Costa Rica', sourceLanguage: 'es' },
+  { categoryId: 'the_netherlands', categoryName: 'The Netherlands', sourceLanguage: 'nl' },
+  { categoryId: 'serbia', categoryName: 'Serbia', sourceLanguage: 'sr' },
+  { categoryId: 'germany', categoryName: 'Germany', sourceLanguage: 'de' },
+  { categoryId: 'brazil', categoryName: 'Brazil', sourceLanguage: 'pt' },
+  { categoryId: 'cryptocurrency', categoryName: 'Cryptocurrency', sourceLanguage: 'en' },
+  { categoryId: 'czech_republic', categoryName: 'Czech Republic', sourceLanguage: 'cs' },
+  { categoryId: 'uk', categoryName: 'UK', sourceLanguage: 'en' },
+  { categoryId: 'sweden', categoryName: 'Sweden', sourceLanguage: 'sv' },
+  { categoryId: 'mexico', categoryName: 'Mexico', sourceLanguage: 'es' },
+  { categoryId: 'romania', categoryName: 'Romania', sourceLanguage: 'ro' },
+  { categoryId: 'sports', categoryName: 'Sports', sourceLanguage: 'en' },
+  { categoryId: 'spain', categoryName: 'Spain', sourceLanguage: 'es' },
+  { categoryId: 'tech', categoryName: 'Technology', sourceLanguage: 'en' },
+  { categoryId: 'italy', categoryName: 'Italy', sourceLanguage: 'it' },
+  { categoryId: 'india', categoryName: 'India', sourceLanguage: 'en' },
+  { categoryId: 'france', categoryName: 'France', sourceLanguage: 'fr' },
+];
 
 export default function NewsFeed({ onArticleSelect }) {
-  const { targetLanguage, nativeLanguage } = useLanguage();
+  const { nativeLanguage } = useLanguage();
   const [articles, setArticles] = useState([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(categories[0].categoryId);
 
   const translateArticleTitles = useCallback((newArticles) => {
     newArticles.forEach((article) => {
@@ -39,7 +82,7 @@ export default function NewsFeed({ onArticleSelect }) {
         if (transData && transData.translation) {
           setArticles(prevArticles =>
             prevArticles.map(prevArticle =>
-              prevArticle.url === article.url
+              prevArticle.link === article.link
                 ? { ...prevArticle, translatedTitle: transData.translation }
                 : prevArticle
             )
@@ -52,80 +95,62 @@ export default function NewsFeed({ onArticleSelect }) {
     });
   }, [nativeLanguage]);
 
-  const fetchNews = useCallback(async (currentPage) => {
-    if (currentPage === 1) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
+  const fetchNews = useCallback(async (category) => {
+    setLoading(true);
     setError(null);
+    setArticles([]);
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_NEWS_API_KEY;
-      if (!apiKey || apiKey === 'YOUR_NEWS_API_KEY') {
-        throw new Error('News API key is not configured. Please add NEXT_PUBLIC_NEWS_API_KEY to your .env.local file.');
+      const response = await fetch(`https://kite.kagi.com/${category}.xml`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch news for category: ${category}`);
       }
+      const rssText = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(rssText, 'application/xml');
+      const items = xmlDoc.querySelectorAll('item');
       
-      // 将语言名字转换为代号
-      const targetLanguageCode = languageNameToCode[targetLanguage] || 'en';
-      const newsUrl = `https://newsapi.org/v2/top-headlines?language=${targetLanguageCode}&apiKey=${apiKey}&page=${currentPage}&pageSize=${PAGE_SIZE}`;
-      const newsResponse = await fetch(newsUrl);
-
-      if (!newsResponse.ok) {
-        const errorData = await newsResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch news');
-      }
-      const newsData = await newsResponse.json();
-      
-      if (!newsData.articles || newsData.articles.length === 0) {
-        setHasMore(false);
-      } else {
-        const newArticles = newsData.articles;
-        
-        setArticles(prev => {
-          const existingUrls = new Set(prev.map(a => a.url));
-          const uniqueNewArticles = newArticles.filter(a => !existingUrls.has(a.url));
-          return [...prev, ...uniqueNewArticles];
-        });
-
-        if (newArticles.length < PAGE_SIZE || (page * PAGE_SIZE >= newsData.totalResults)) {
-          setHasMore(false);
+      const newArticles = Array.from(items).map(item => {
+        let description = item.querySelector('description').textContent;
+        const sourcesIndex = description.indexOf('<h3>Sources:</h3>');
+        if (sourcesIndex !== -1) {
+          description = description.substring(0, sourcesIndex);
         }
+        const imgMatch = description.match(/<img src='([^']*)'/);
+        const urlToImage = imgMatch ? imgMatch[1] : null;
         
-        translateArticleTitles(newArticles);
-      }
+        return {
+          title: item.querySelector('title').textContent,
+          link: item.querySelector('link').textContent,
+          description: description,
+          urlToImage: urlToImage,
+        };
+      });
+
+      setArticles(newArticles);
+      translateArticleTitles(newArticles);
+
     } catch (err) {
       setError(err.message);
     } finally {
-      if (currentPage === 1) {
-        setLoading(false);
-      } else {
-        setLoadingMore(false);
-      }
+      setLoading(false);
     }
-  }, [targetLanguage, translateArticleTitles, page]);
+  }, [translateArticleTitles]);
 
   useEffect(() => {
-    if (!targetLanguage || !nativeLanguage) {
-      setLoading(false);
-      return;
+    if (selectedCategory) {
+      fetchNews(selectedCategory);
     }
-    setArticles([]);
-    setPage(1);
-    setHasMore(true);
-    fetchNews(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetLanguage, nativeLanguage]);
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchNews(nextPage);
-  };
+  }, [selectedCategory, fetchNews]);
 
   return (
     <div className="h-full bg-gray-100 p-4 rounded-lg overflow-y-auto">
       <h2 className="text-xl font-bold mb-4 text-gray-800">News Feed</h2>
+      <CategoryTabs
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
       
       {loading && articles.length === 0 && (
         <>{[...Array(5)].map((_, i) => <NewsCardSkeleton key={i} />)}</>
@@ -136,20 +161,8 @@ export default function NewsFeed({ onArticleSelect }) {
       {!error && (
         <div>
           {articles.map((article) => (
-            <NewsCard key={article.url} article={article} onClick={() => onArticleSelect(article)} />
+            <NewsCard key={article.link} article={article} onClick={() => onArticleSelect(article)} />
           ))}
-        </div>
-      )}
-
-      {hasMore && !loading && (
-        <div className="text-center mt-4">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full disabled:bg-gray-400"
-          >
-            {loadingMore ? 'Loading...' : 'Load More'}
-          </button>
         </div>
       )}
     </div>

@@ -217,7 +217,7 @@ export default function ArticleChatView({ article, onClose }) {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } } },
-          systemInstruction: getSystemInstruction(targetLanguage, nativeLanguage, article),
+          systemInstruction: getSystemInstruction(targetLanguage, nativeLanguage, article.description),
         },
       });
     } catch (e) {
@@ -343,10 +343,7 @@ export default function ArticleChatView({ article, onClose }) {
         </div>
         {article.author && <p className="text-sm text-gray-500 mb-1">By {article.author}</p>}
         {article.publishedAt && <p className="text-sm text-gray-500 mb-4">Published: {new Date(article.publishedAt).toLocaleDateString()}</p>}
-        <p className="text-gray-700 leading-relaxed">{article.description}</p>
-        <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-4 inline-block">
-          Read full story
-        </a>
+        <p className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: article.description }}></p>
       </div>
 
       {/* Divider */}
