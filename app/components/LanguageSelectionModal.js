@@ -28,7 +28,7 @@ export default function LanguageSelectionModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">Welcome to Talk News!</h2>
         <p className="text-center mb-6">First, let&apos;s set up your languages.</p>
