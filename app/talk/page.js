@@ -15,10 +15,10 @@ export default function TalkPage() {
   return (
     <>
       <LanguageSelectionModal />
-      <main className="flex flex-col md:flex-row h-screen p-4 gap-4 bg-gray-50">
+      <main className="flex flex-col md:flex-row md:h-screen p-4 gap-4 bg-gray-50">
         {/* Left Panel: News Feed */}
         <div
-          className={`h-full md:w-1/3 lg:w-1/4 ${
+          className={`md:h-full md:w-1/3 lg:w-1/4 ${
             selectedArticle ? 'hidden md:block' : 'block'
           }`}
         >
@@ -27,7 +27,7 @@ export default function TalkPage() {
 
         {/* Right Panel: Article and Chat */}
         <div
-          className={`h-full flex-col md:w-2/3 lg:w-3/4 ${
+          className={`md:h-full flex-col md:w-2/3 lg:w-3/4 ${
             selectedArticle ? 'flex' : 'hidden md:flex'
           }`}
         >

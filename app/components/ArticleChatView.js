@@ -57,6 +57,7 @@ const decodeAudioData = async (data, ctx, sampleRate, numChannels) => {
 export default function ArticleChatView({ article, onClose }) {
   const { nativeLanguage, targetLanguage } = useLanguage();
   const [translatedTitle, setTranslatedTitle] = useState('');
+  const [processedDescription, setProcessedDescription] = useState('');
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,6 +89,25 @@ export default function ArticleChatView({ article, onClose }) {
       setMessages([]);
       setUserInput('');
       setTranslatedTitle('');
+      
+      // Process description to remove citation markers and add image styling
+      const processDescription = (description) => {
+        if (!description) return '';
+        
+        // Remove citation markers like [firstpost#1], [thehindu#1], etc.
+        let processed = description.replace(/\[[\w#]+\]/g, '');
+        
+        // Add CSS styling to images to make them smaller
+        processed = processed.replace(
+          /<img([^>]*?)>/gi, 
+          '<img$1 style="max-width: 300px; height: auto; display: block; margin: 10px 0;">'
+        );
+        
+        return processed;
+      };
+      
+      setProcessedDescription(processDescription(article.description));
+      
       stopRealtimeRecording();
       if (sessionRef.current) {
         sessionRef.current.close();
@@ -330,9 +350,9 @@ export default function ArticleChatView({ article, onClose }) {
   }
 
   return (
-    <div className="h-full bg-white p-6 rounded-lg shadow flex flex-col">
+    <div className="md:h-full bg-white p-6 rounded-lg shadow flex flex-col">
       {/* Article Details Section */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 md:max-h-80 md:overflow-y-auto">
         <div className="flex justify-between items-start">
           <h2 className="text-2xl font-bold mb-3">{translatedTitle || article.title}</h2>
           <button onClick={onClose} className="md:hidden text-gray-500 hover:text-gray-800" aria-label="Close article">
@@ -343,7 +363,7 @@ export default function ArticleChatView({ article, onClose }) {
         </div>
         {article.author && <p className="text-sm text-gray-500 mb-1">By {article.author}</p>}
         {article.publishedAt && <p className="text-sm text-gray-500 mb-4">Published: {new Date(article.publishedAt).toLocaleDateString()}</p>}
-        <p className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: article.description }}></p>
+        <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: processedDescription }}></div>
       </div>
 
       {/* Divider */}
