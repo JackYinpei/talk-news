@@ -487,7 +487,7 @@ function App() {
 
   return (
     <div className="text-base flex flex-col h-screen bg-gray-100 text-gray-800 relative">
-      <div className="p-5 text-lg font-semibold flex justify-between items-center">
+      <div className="p-5 text-lg font-semibold flex justify-between items-center bg-white border-b border-gray-200 shadow-sm">
         <div
           className="flex items-center cursor-pointer"
           onClick={() => window.location.reload()}
@@ -513,7 +513,7 @@ function App() {
             <select
               value={agentSetKey}
               onChange={handleAgentChange}
-              className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+              className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none bg-white hover:border-gray-400 transition-colors"
             >
               {Object.keys(allAgentSets).map((agentKey) => (
                 <option key={agentKey} value={agentKey}>
@@ -541,7 +541,7 @@ function App() {
                 <select
                   value={selectedAgentName}
                   onChange={handleSelectedAgentChange}
-                  className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+                  className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none bg-white hover:border-gray-400 transition-colors"
                 >
                   {selectedAgentConfigSet?.map((agent) => (
                     <option key={agent.name} value={agent.name}>
@@ -568,7 +568,7 @@ function App() {
         </div>
       </div>
 
-      <div className="flex flex-1 gap-2 px-2 overflow-hidden relative">
+      <div className="flex flex-1 gap-4 p-4 overflow-hidden relative">
         <Transcript
           userText={userText}
           setUserText={setUserText}

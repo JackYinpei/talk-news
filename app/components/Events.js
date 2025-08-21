@@ -47,16 +47,16 @@ function Events({ isExpanded }) {
     <div
       className={
         (isExpanded ? "w-1/2 overflow-auto" : "w-0 overflow-hidden opacity-0") +
-        " transition-all rounded-xl duration-200 ease-in-out flex-col bg-white"
+        " transition-all rounded-xl duration-200 ease-in-out flex flex-col bg-white shadow-sm border border-gray-200"
       }
       ref={eventLogsContainerRef}
     >
       {isExpanded && (
-        <div>
-          <div className="flex items-center justify-between px-6 py-3.5 sticky top-0 z-10 text-base border-b bg-white rounded-t-xl">
-            <span className="font-semibold">Logs</span>
+        <>
+          <div className="flex items-center justify-between px-6 py-3.5 sticky top-0 z-10 text-base border-b border-gray-200 bg-white rounded-t-xl">
+            <span className="font-semibold text-gray-900">Logs</span>
           </div>
-          <div>
+          <div className="flex-1 overflow-y-auto">
             {loggedEvents.map((log, idx) => {
               const arrowInfo = getDirectionArrow(log.direction);
               const isError =
@@ -66,36 +66,37 @@ function Events({ isExpanded }) {
               return (
                 <div
                   key={`${log.id}-${idx}`}
-                  className="border-t border-gray-200 py-2 px-6 font-mono"
+                  className="border-b border-gray-100 py-2 px-6 font-mono hover:bg-gray-50 transition-colors"
                 >
                   <div
                     onClick={() => toggleExpand(log.id)}
                     className="flex items-center justify-between cursor-pointer"
                   >
-                    <div className="flex items-center flex-1">
+                    <div className="flex items-center flex-1 min-w-0">
                       <span
                         style={{ color: arrowInfo.color }}
-                        className="ml-1 mr-2"
+                        className="ml-1 mr-2 flex-shrink-0"
                       >
                       {arrowInfo.symbol}
                       </span>
                       <span
                         className={
-                          "flex-1 text-sm " +
+                          "flex-1 text-sm truncate " +
                           (isError ? "text-red-600" : "text-gray-800")
                         }
+                        title={log.eventName}
                       >
                         {log.eventName}
                       </span>
                     </div>
-                    <div className="text-gray-500 ml-1 text-xs whitespace-nowrap">
+                    <div className="text-gray-500 ml-2 text-xs whitespace-nowrap flex-shrink-0">
                       {log.timestamp}
                     </div>
                   </div>
 
                   {log.expanded && log.eventData && (
-                    <div className="text-gray-800 text-left">
-                      <pre className="border-l-2 ml-1 border-gray-200 whitespace-pre-wrap break-words font-mono text-xs mb-2 mt-2 pl-2">
+                    <div className="text-gray-800 text-left mt-2">
+                      <pre className="border-l-2 ml-1 border-gray-300 whitespace-pre-wrap break-words font-mono text-xs mb-2 pl-3 bg-gray-50 rounded-r-md py-2">
                         {JSON.stringify(log.eventData, null, 2)}
                       </pre>
                     </div>
@@ -104,7 +105,7 @@ function Events({ isExpanded }) {
               );
             })}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
