@@ -22,7 +22,7 @@ export async function GET() {
     // );
     // const data = await response.json();
     // return NextResponse.json(data);
-    return NextResponse.json({client_secret: { value:"ek_68a68751222c819182f9b6a54a23f24c"}});
+    return NextResponse.json({client_secret: { value:"ek_68a9556bf85081919f177db640b14f96"}});
   } catch (error) {
     console.error("Error in /session:", error);
     return NextResponse.json(

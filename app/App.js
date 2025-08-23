@@ -21,6 +21,7 @@ import { createModerationGuardrail } from "./agentConfigs/guardrails";
 import { allAgentSets, defaultAgentSetKey } from "./agentConfigs";
 import { customerServiceRetailScenario } from "./agentConfigs/customerServiceRetail";
 import { chatSupervisorScenario } from "./agentConfigs/chatSupervisor";
+import { chatLearnScenario } from "./agentConfigs/chatLearn";
 import { customerServiceRetailCompanyName } from "./agentConfigs/customerServiceRetail";
 import { chatSupervisorCompanyName } from "./agentConfigs/chatSupervisor";
 import { simpleHandoffScenario } from "./agentConfigs/simpleHandoff";
@@ -33,6 +34,7 @@ const sdkScenarioMap = {
   simpleHandoff: simpleHandoffScenario,
   customerServiceRetail: customerServiceRetailScenario,
   chatSupervisor: chatSupervisorScenario,
+  chatLearn: chatLearnScenario,
 };
 
 import useAudioDownload from "./hooks/useAudioDownload";

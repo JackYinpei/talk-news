@@ -2,6 +2,7 @@ import { simpleHandoffScenario } from './simpleHandoff';
 import { customerServiceRetailScenario } from './customerServiceRetail';
 import { chatSupervisorScenario } from './chatSupervisor';
 import { mathLearnScenario } from './mathLearn';
+import { chatLearnScenario } from './chatLearn';
 
 /**
  * Map of scenario key -> array of RealtimeAgent objects
@@ -12,6 +13,7 @@ export const allAgentSets = {
   customerServiceRetail: customerServiceRetailScenario,
   chatSupervisor: chatSupervisorScenario,
   mathLearn: mathLearnScenario,
+  chatLearn: chatLearnScenario,
 };
 
-export const defaultAgentSetKey = 'mathLearn';
+export const defaultAgentSetKey = 'chatLearn';
