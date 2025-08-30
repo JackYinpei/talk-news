@@ -72,21 +72,41 @@ Remember: Your goal is to make English learning feel natural, enjoyable, and con
             type: 'string',
             description: 'The user message to analyze for learning opportunities',
           },
+          items: {
+            type: 'array',
+            description: 'List of unfamiliar or interesting elements identified from user input',
+            items: {
+              type: "object",
+              properties: {
+                text: {
+                  type: "string",
+                  description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
+                },
+                type: {
+                  type: "string",
+                  enum: ["word", "phrase", "grammar", "other"],
+                  description: "The category of the unfamiliar element"
+                }
+              },
+              required: ["text", "type"]
+            }
+          },
           context: {
             type: 'string',
             description: 'Additional context about the conversation or user level if known',
           },
         },
-        required: ['userMessage'],
+        required: ['userMessage', 'items'],
         additionalProperties: false,
       },
       execute: async (input) => {
-        const { userMessage, context } = input;
-        
+        const { userMessage, items, context } = input;
+
         // Log the tool call parameters for debugging as requested by user
         console.log('extractUnfamiliarEnglish tool called with parameters:', {
           userMessage,
           context,
+          items,
           timestamp: new Date().toISOString()
         });
 
@@ -100,7 +120,7 @@ Remember: Your goal is to make English learning feel natural, enjoyable, and con
 
         // Simple analysis logic (in real implementation, this could use AI or NLP)
         const words = userMessage.toLowerCase().split(/\s+/);
-        
+
         // Mock analysis - identify potentially challenging words/patterns
         if (words.length > 5) {
           analysisResults.learningOpportunities.push(
@@ -128,9 +148,9 @@ Remember: Your goal is to make English learning feel natural, enjoyable, and con
         return {
           success: true,
           analysis: analysisResults,
-          hasLearningContent: analysisResults.unfamiliarWords.length > 0 || 
-                            analysisResults.grammarPoints.length > 0 ||
-                            analysisResults.learningOpportunities.length > 0
+          hasLearningContent: analysisResults.unfamiliarWords.length > 0 ||
+            analysisResults.grammarPoints.length > 0 ||
+            analysisResults.learningOpportunities.length > 0
         };
       },
     }),
