@@ -75,7 +75,15 @@ function App() {
 
     useEffect(() => {
         if (selectedNews) {
-            sendSimulatedUserMessage(`Let's discuss the following news article: ${selectedNews.title}. ${selectedNews.content}`);
+            interrupt();
+
+            try {
+                sendUserText(`Let's discuss the following news article: ${selectedNews.title}. ${selectedNews.content}`);
+            } catch (err) {
+                console.error('Failed to send via SDK', err);
+            }
+
+            setUserText("");
         }
     }, [selectedNews])
 

@@ -50,73 +50,53 @@ Remember: Your goal is to make English learning feel natural, enjoyable, and con
   tools: [
     tool({
       name: 'extractUnfamiliarEnglish',
-      description: 'Analyzes user English text to identify unfamiliar words, phrases, or grammar patterns that could be learning opportunities. Call this after user messages with substantial English content to provide educational insights.',
+      description: 'Analyzes user English text to identify unfamiliar words, phrases, or grammar patterns that could be learning opportunities. Call this when users raise questions about words, grammar, or phrases',
       parameters: {
         type: 'object',
         properties: {
-          userMessage: {
-            type: 'string',
-            description: 'The user message to analyze for learning opportunities',
+          items: {
+            type: 'array',
+            description: 'List of unfamiliar or interesting elements identified from conversation',
+            item: {
+              type: "object",
+              properties: {
+                text: {
+                  type: "string",
+                  description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
+                },
+                type: {
+                  type: "string",
+                  enum: ["word", "phrase", "grammar", "other"],
+                  description: "The category of the unfamiliar element"
+                }
+              },
+              required: ["text", "type"]
+            }
           },
           context: {
             type: 'string',
             description: 'Additional context about the conversation or user level if known',
           },
         },
-        required: ['userMessage'],
+        required: ['items'],
         additionalProperties: false,
       },
       execute: async (input) => {
-        const { userMessage, context } = input;
-        
+        const { items, context } = input;
+
         // Log the tool call parameters for debugging as requested by user
         console.log('extractUnfamiliarEnglish tool called with parameters:', {
-          userMessage,
+          items,
           context,
           timestamp: new Date().toISOString()
         });
 
-        // Simulate analysis results
-        const analysisResults = {
-          unfamiliarWords: [],
-          grammarPoints: [],
-          suggestions: [],
-          learningOpportunities: []
-        };
-
-        // Simple analysis logic (in real implementation, this could use AI or NLP)
-        const words = userMessage.toLowerCase().split(/\s+/);
-        
-        // Mock analysis - identify potentially challenging words/patterns
-        if (words.length > 5) {
-          analysisResults.learningOpportunities.push(
-            'Good use of complex sentence structure!'
-          );
-        }
-
-        if (userMessage.includes('went to')) {
-          analysisResults.grammarPoints.push({
-            pattern: 'Past tense narrative',
-            explanation: 'Using "went to" for describing past activities',
-            relatedWords: ['visited', 'traveled to', 'headed to']
-          });
-        }
-
-        if (words.some(word => word.length > 7)) {
-          const longWords = words.filter(word => word.length > 7);
-          analysisResults.unfamiliarWords = longWords.slice(0, 2).map(word => ({
-            word,
-            level: 'intermediate',
-            synonyms: ['alternative', 'option'] // Mock synonyms
-          }));
-        }
-
         return {
           success: true,
           analysis: analysisResults,
-          hasLearningContent: analysisResults.unfamiliarWords.length > 0 || 
-                            analysisResults.grammarPoints.length > 0 ||
-                            analysisResults.learningOpportunities.length > 0
+          hasLearningContent: analysisResults.unfamiliarWords.length > 0 ||
+            analysisResults.grammarPoints.length > 0 ||
+            analysisResults.learningOpportunities.length > 0
         };
       },
     }),
@@ -125,7 +105,5 @@ Remember: Your goal is to make English learning feel natural, enjoyable, and con
 });
 
 export const chatLearnScenario = [chatLearnAgent];
-
-export const chatLearnCompanyName = 'ChatLearn';
 
 export default chatLearnScenario;
