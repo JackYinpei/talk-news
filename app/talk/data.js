@@ -1,5 +1,3 @@
-// Mock news data for demonstration
-
 export const mockNews = [
     {
         id: 1,
@@ -41,4 +39,4 @@ export const mockNews = [
         content:
             "A comprehensive global education initiative has been launched, targeting underserved communities across six continents. The program combines cutting-edge technology with traditional teaching methods to deliver high-quality education to areas previously lacking educational resources.",
     },
-];
+]

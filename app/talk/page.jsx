@@ -26,7 +26,7 @@ import { customerServiceRetailCompanyName } from "@/app/agentConfigs/customerSer
 import { chatSupervisorCompanyName } from "@/app/agentConfigs/chatSupervisor";
 import { simpleHandoffScenario } from "@/app/agentConfigs/simpleHandoff";
 
-// mock news data
+// Mock news data
 import { mockNews } from "./data";
 
 /**
@@ -73,18 +73,17 @@ function App() {
 
     const [selectedNews, setSelectedNews] = useState(null)
 
-    useEffect(() => {
+    useEffect(()=>{
+
         if (selectedNews) {
             interrupt();
-
             try {
-                sendUserText(`Let's discuss the following news article: ${selectedNews.title}. ${selectedNews.content}`);
+                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.title} - ${selectedNews.description}`);
             } catch (err) {
                 console.error('Failed to send via SDK', err);
             }
-
-            setUserText("");
         }
+
     }, [selectedNews])
 
     /** @type {[string, function]} */
