@@ -91,21 +91,6 @@ import { useHandleSessionHistory } from "@/app/hooks/useHandleSessionHistory";
  * @returns {JSX.Element} The main application component
  */
 function App() {
-    // 添加屏幕宽度状态 - 避免SSR水合错误
-    const [screenWidth, setScreenWidth] = useState(0);
-    const [isMounted, setIsMounted] = useState(false);
-
-    useEffect(() => {
-        setIsMounted(true);
-        const updateScreenWidth = () => {
-            setScreenWidth(window.innerWidth);
-        };
-        
-        updateScreenWidth(); // 初始设置
-        window.addEventListener('resize', updateScreenWidth);
-        
-        return () => window.removeEventListener('resize', updateScreenWidth);
-    }, []);
     // ---------------------------------------------------------------------
     // Codec selector – lets you toggle between wide-band Opus (48 kHz)
     // and narrow-band PCMU/PCMA (8 kHz) to hear what the agent sounds like on
@@ -567,7 +552,7 @@ function App() {
                     {/* Desktop News Cards - 在大屏幕以上显示 */}
                     <div className="hidden lg:flex lg:w-[30%] flex-col">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                        <div className="flex-1 overflow-y-auto space-y-4 px-2 py-2">
                             {mockNews.map((news) => (
                                 <NewsCard
                                     key={news.id}
@@ -587,7 +572,10 @@ function App() {
                             onSendMessage={handleSendTextMessage}
                             downloadRecording={downloadRecording}
                             canSend={sessionStatus === "CONNECTED"}
-                            selectedNews={selectedNews} />
+                            selectedNews={selectedNews}
+                            sessionStatus={sessionStatus}
+                            onToggleConnection={onToggleConnection}
+                        />
                     </div>
                 </div>
             </div>

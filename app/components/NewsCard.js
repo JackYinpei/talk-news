@@ -19,7 +19,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           <Badge variant="secondary" className="text-xs">
             {news.category}
           </Badge>
-          <span className="text-xs text-muted-foreground">{new Date(news.date).toLocaleDateString()}</span>
+          <span className="text-xs text-muted-foreground">{new Date(news.date).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
         </div>
         <h3 className={cn(
           "font-semibold text-card-foreground leading-tight",

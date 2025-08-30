@@ -27,6 +27,8 @@ function Transcript({
   onSendMessage,
   canSend,
   downloadRecording,
+  sessionStatus,
+  onToggleConnection,
 }) {
   const { transcriptItems, toggleTranscriptItemExpand } = useTranscript();
   /** @type {import('react').MutableRefObject<HTMLDivElement|null>} */
@@ -36,6 +38,9 @@ function Transcript({
   const [justCopied, setJustCopied] = useState(false);
   /** @type {import('react').MutableRefObject<HTMLInputElement|null>} */
   const inputRef = useRef(null);
+
+  const isConnected = sessionStatus === "CONNECTED";
+  const isConnecting = sessionStatus === "CONNECTING";
 
   /**
    * Scroll transcript to bottom
@@ -241,6 +246,30 @@ function Transcript({
       {/* Input Area */}
       <div className="border-t border-slate-200 bg-white p-4">
         <div className="flex items-end gap-3">
+          <button
+            onClick={onToggleConnection}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-200 flex-shrink-0 ${
+              isConnected
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-green-500 hover:bg-green-600"
+            } text-white disabled:bg-slate-300`}
+            disabled={isConnecting}
+          >
+            {isConnecting ? (
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : isConnected ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 11-12.728 0M12 9v3m0 4h.01" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.552 15.552a6 6 0 10-8.104-8.104m8.104 8.104L12 12m3.552 3.552l-1.414-1.414" />
+              </svg>
+            )}
+          </button>
           <div className="flex-1 relative">
             <input
               ref={inputRef}
