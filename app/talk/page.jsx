@@ -8,7 +8,7 @@ import Image from "next/image";
 import Transcript from "@/app/components/Transcript";
 import Events from "@/app/components/Events";
 import BottomToolbar from "@/app/components/BottomToolbar";
-import { NewsCard } from "@/app/components/NewsCard";
+import NewsFeed from "@/app/components/NewsFeed";
 
 
 // Context providers & hooks
@@ -25,9 +25,6 @@ import { chatLearnScenario } from "@/app/agentConfigs/chatLearn";
 import { customerServiceRetailCompanyName } from "@/app/agentConfigs/customerServiceRetail";
 import { chatSupervisorCompanyName } from "@/app/agentConfigs/chatSupervisor";
 import { simpleHandoffScenario } from "@/app/agentConfigs/simpleHandoff";
-
-// Mock news data
-import { mockNews } from "./data";
 
 /**
  * Map used by connect logic for scenarios defined via the SDK.
@@ -78,7 +75,7 @@ function App() {
         if (selectedNews) {
             interrupt();
             try {
-                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.title} - ${selectedNews.description}`);
+                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.originalTitle || selectedNews.title} - ${selectedNews.description}`);
             } catch (err) {
                 console.error('Failed to send via SDK', err);
             }
@@ -508,31 +505,27 @@ function App() {
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
                     <div className="lg:hidden">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
-                            {mockNews.map((news) => (
-                                <NewsCard
-                                    key={news.id}
-                                    news={news}
-                                    isSelected={selectedNews?.id === news.id}
-                                    onSelect={() => setSelectedNews(news)}
-                                    compact={true}
-                                />
-                            ))}
+                        <div className="overflow-x-auto pb-4 -mx-4 px-4">
+                            <NewsFeed
+                                onArticleSelect={setSelectedNews}
+                                selectedNews={selectedNews}
+                                targetLanguage="en"
+                                nativeLanguage="zh-CN"
+                                isMobile={true}
+                            />
                         </div>
                     </div>
 
                     {/* Desktop News Cards - 在大屏幕以上显示 */}
                     <div className="hidden lg:flex lg:w-[30%] flex-col">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                        <div className="flex-1 overflow-y-auto space-y-4 px-2 py-2">
-                            {mockNews.map((news) => (
-                                <NewsCard
-                                    key={news.id}
-                                    news={news}
-                                    isSelected={selectedNews?.id === news.id}
-                                    onSelect={() => setSelectedNews(news)}
-                                />
-                            ))}
+                        <div className="flex-1 overflow-y-auto">
+                            <NewsFeed
+                                onArticleSelect={setSelectedNews}
+                                selectedNews={selectedNews}
+                                targetLanguage="en"
+                                nativeLanguage="zh-CN"
+                            />
                         </div>
                     </div>
 
