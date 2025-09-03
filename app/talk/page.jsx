@@ -70,23 +70,12 @@ function App() {
 
     const [selectedNews, setSelectedNews] = useState(null)
 
-    useEffect(()=>{
-
-        if (selectedNews) {
-            interrupt();
-            try {
-                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.originalTitle || selectedNews.title} - ${selectedNews.description}`);
-            } catch (err) {
-                console.error('Failed to send via SDK', err);
-            }
-        }
-
-    }, [selectedNews])
-
     /** @type {[string, function]} */
     const [selectedAgentName, setSelectedAgentName] = useState("");
     /** @type {[Array<Object>|null, function]} */
     const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState(null);
+    /** @type {[string, function]} */
+    const [sessionStatus, setSessionStatus] = useState("DISCONNECTED");
 
     const audioElementRef = useRef(null);
     // Ref to identify whether the latest agent switch came from an automatic handoff
@@ -123,8 +112,18 @@ function App() {
         },
     });
 
-    /** @type {[string, function]} */
-    const [sessionStatus, setSessionStatus] = useState("DISCONNECTED");
+    useEffect(()=>{
+
+        if (selectedNews && sessionStatus === 'CONNECTED') {
+            interrupt();
+            try {
+                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.originalTitle || selectedNews.title} - ${selectedNews.description}`);
+            } catch (err) {
+                console.error('Failed to send via SDK', err);
+            }
+        }
+
+    }, [selectedNews, sessionStatus])
 
     /** @type {[boolean, function]} */
     const [isEventsPaneExpanded, setIsEventsPaneExpanded] = useState(true);

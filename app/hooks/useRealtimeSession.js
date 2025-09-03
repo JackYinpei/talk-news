@@ -185,13 +185,16 @@ export function useRealtimeSession(callbacks = {}) {
    */
   const assertconnected = () => {
     if (!sessionRef.current) throw new Error('RealtimeSession not connected');
+    if (status !== 'CONNECTED') throw new Error('WebRTC data channel is not connected. Make sure you call `connect()` before sending events.');
   };
 
   /* ----------------------- message helpers ------------------------- */
 
   const interrupt = useCallback(() => {
-    sessionRef.current?.interrupt();
-  }, []);
+    if (status === 'CONNECTED' && sessionRef.current) {
+      sessionRef.current.interrupt();
+    }
+  }, [status]);
   
   /**
    * Send user text message
@@ -207,8 +210,12 @@ export function useRealtimeSession(callbacks = {}) {
    * @param {*} ev - Event to send
    */
   const sendEvent = useCallback((ev) => {
-    sessionRef.current?.transport.sendEvent(ev);
-  }, []);
+    if (status === 'CONNECTED' && sessionRef.current?.transport) {
+      sessionRef.current.transport.sendEvent(ev);
+    } else {
+      console.warn('Cannot send event: WebRTC connection not established');
+    }
+  }, [status]);
 
   /**
    * Mute/unmute session
