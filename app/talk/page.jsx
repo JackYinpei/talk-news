@@ -491,7 +491,7 @@ function App() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b border-border bg-card">
+            <header className="border-b border-border bg-card hidden md:block">
                 <div className="container mx-auto px-4 py-4">
                     <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
                     <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>

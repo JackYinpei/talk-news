@@ -8,9 +8,8 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md",
-        isSelected ? "ring-2 ring-primary bg-accent/10" : "hover:bg-card/80",
-        compact ? "min-w-[280px] max-w-[320px] flex-shrink-0" : "w-full"
+        "cursor-pointer transition-all duration-200 hover:shadow-md w-full h-48 flex flex-col",
+        isSelected ? "ring-2 ring-primary bg-accent/10" : "hover:bg-card/80"
       )}
       onClick={onSelect}
     >
@@ -26,7 +25,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           compact ? "text-base" : "text-lg"
         )}>{news.title}</h3>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 flex-1 flex flex-col">
         <div className={cn("flex gap-3", compact ? "flex-row" : "flex-row")}>
           {news.urlToImage && (
             <div className="flex-shrink-0">

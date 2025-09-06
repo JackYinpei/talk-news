@@ -189,14 +189,23 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
           urlToImage: article.urlToImage
         };
         
+        const isSelected = selectedNews?.id === article.id;
+        
         return (
-          <NewsCard
+          <div 
             key={article.id}
-            news={newsData}
-            isSelected={selectedNews?.id === article.id}
-            onSelect={() => onArticleSelect && onArticleSelect(newsData)}
-            compact={isMobile}
-          />
+            className={isMobile ? `flex-shrink-0 transition-all duration-300 ${
+              isSelected ? "w-[400px]" : "w-[280px]"
+            }` : ""}
+          >
+            <NewsCard
+              news={newsData}
+              isSelected={isSelected}
+              onSelect={() => onArticleSelect && onArticleSelect(newsData)}
+              compact={isMobile}
+              expandedContent={isSelected && isMobile}
+            />
+          </div>
         );
       })}
       </div>
