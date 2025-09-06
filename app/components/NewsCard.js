@@ -8,7 +8,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md w-full h-48 flex flex-col",
+        "cursor-pointer transition-all duration-200 hover:shadow-md w-full h-48 flex flex-col overflow-hidden",
         isSelected ? "ring-2 ring-primary bg-accent/10" : "hover:bg-card/80"
       )}
       onClick={onSelect}
@@ -21,7 +21,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           <span className="text-xs text-muted-foreground">{new Date(news.date).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
         </div>
         <h3 className={cn(
-          "font-semibold text-card-foreground leading-tight",
+          "font-semibold text-card-foreground leading-tight line-clamp-2",
           compact ? "text-base" : "text-lg"
         )}>{news.title}</h3>
       </CardHeader>

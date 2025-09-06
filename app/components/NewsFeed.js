@@ -170,7 +170,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     <div>
       <CategorySelector />
       <div 
-        className={isMobile ? "flex gap-3 overflow-x-auto px-2" : "space-y-4 px-2 py-2"}
+        className={isMobile ? "flex gap-3 overflow-x-auto overflow-y-auto px-2" : "space-y-4 px-2 py-2"}
         style={isMobile ? {
           touchAction: 'pan-x pinch-zoom',
           scrollBehavior: 'smooth'
