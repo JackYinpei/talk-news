@@ -105,13 +105,14 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   }, [selectedCategory, fetchNews]);
 
   const CategorySelector = () => (
-    <div className={`mb-4 ${isMobile ? "px-2" : "px-2"}`}>
+    <div className={`mb-4 ${isMobile ? "px-2" : "px-2"} ${isMobile ? "sticky top-0 bg-background z-10" : ""}`}>
       <div className="relative">
         <div 
           className="flex overflow-x-auto gap-2 pb-2"
           style={{
             scrollbarWidth: 'thin',
-            scrollbarColor: '#cbd5e1 #f1f5f9'
+            scrollbarColor: '#cbd5e1 #f1f5f9',
+            touchAction: 'pan-x pinch-zoom'
           }}
         >
           {categories.map((category) => (
@@ -168,7 +169,13 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   return (
     <div>
       <CategorySelector />
-      <div className={isMobile ? "flex gap-3" : "space-y-4 px-2 py-2"}>
+      <div 
+        className={isMobile ? "flex gap-3 overflow-x-auto px-2" : "space-y-4 px-2 py-2"}
+        style={isMobile ? {
+          touchAction: 'pan-x pinch-zoom',
+          scrollBehavior: 'smooth'
+        } : {}}
+      >
         {articles.map((article) => {
         // 转换数据格式以匹配现有NewsCard组件
         const newsData = {
