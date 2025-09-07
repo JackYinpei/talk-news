@@ -196,7 +196,9 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
             key={article.id}
             className={isMobile ? `flex-shrink-0 transition-all duration-300 ${
               isSelected ? "w-[400px]" : "w-[280px]"
-            }` : ""}
+            }` : `transition-all duration-300 ${
+              isSelected ? "h-96" : "h-48"
+            }`}
           >
             <NewsCard
               news={newsData}

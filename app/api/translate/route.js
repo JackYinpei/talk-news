@@ -32,19 +32,19 @@ export async function POST(request) {
     
     const prompt = `请将以下文本翻译成${targetLanguageName}，只返回翻译结果，不要添加任何说明：\n\n${text}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    // const response = await ai.models.generateContent({
+    //   model: "gemini-2.5-flash",
+    //   contents: prompt,
+    // });
 
-    const translation = response.text?.trim();
+    // const translation = response.text?.trim();
     
-    if (!translation) {
-      throw new Error('No translation received from Gemini');
-    }
+    // if (!translation) {
+    //   throw new Error('No translation received from Gemini');
+    // }
 
     return Response.json({ 
-      translation,
+      text,
       sourceText: text,
       targetLanguage: targetLang
     });
