@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+```
+curl -X POST https://api.openai.com/v1/realtime/client_secrets \
+   -H "Authorization: Bearer $OPENAI_API_KEY" \
+   -H "Content-Type: application/json" \
+   -d '{
+     "session": {
+       "type": "realtime",
+       "model": "gpt-realtime"
+     }
+   }'
+```

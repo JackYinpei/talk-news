@@ -118,6 +118,7 @@ function App() {
             interrupt();
             try {
                 sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.originalTitle || selectedNews.title} - ${selectedNews.description}`);
+                console.log("send ok")
             } catch (err) {
                 console.error('Failed to send via SDK', err);
             }
@@ -287,6 +288,15 @@ function App() {
             },
         });
         sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
+    };
+
+    /**
+     * Send a systemp prompt message to the agent
+     * @param {string} text - The message text to send
+     */
+    const sendSystemPromptMessage = (text) => {
+        const id = uuidv4().slice(0, 32);
+        addTranscriptMessage(id, "user", text, true);
     };
 
     /**
