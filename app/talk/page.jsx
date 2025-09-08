@@ -500,7 +500,7 @@ function App() {
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-6">
-                <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
+                <div className="flex flex-col lg:flex-row gap-6 h-screen lg:h-[calc(100vh-140px)]">
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
                     <div className="lg:hidden">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
