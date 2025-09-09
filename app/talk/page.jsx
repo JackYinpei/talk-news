@@ -1,502 +1,217 @@
-"use client";
-import React, { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+'use client'
 
-import Image from "next/image";
+import {
+    RealtimeAgent,
+    RealtimeSession,
+    tool,
+} from '@openai/agents/realtime';
+import { useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
+import { WavRecorder, WavStreamPlayer } from 'wavtools';
+
 
 // UI components
 import Transcript from "@/app/components/Transcript";
-import Events from "@/app/components/Events";
-import BottomToolbar from "@/app/components/BottomToolbar";
 import NewsFeed from "@/app/components/NewsFeed";
+import { History } from "@/app/components/History";
 
+import { getToken } from "@/app/server/token.action";
 
-// Context providers & hooks
-import { useTranscript } from "@/app/contexts/TranscriptContext";
-import { useEvent } from "@/app/contexts/EventContext";
-import { useRealtimeSession } from "@/app/hooks/useRealtimeSession";
-import { createModerationGuardrail } from "@/app/agentConfigs/guardrails";
+const refundBackchannel = tool({
+    name: 'refundBackchannel',
+    description: 'Evaluate a refund',
+    parameters: z.object({
+        request: z.string(),
+    }),
+    execute: async ({ request }) => {
+        console.log("request")
+        // return handleRefundRequest(request);
+    },
+});
 
-// Agent configs
-import { allAgentSets, defaultAgentSetKey } from "@/app/agentConfigs";
-import { customerServiceRetailScenario } from "@/app/agentConfigs/customerServiceRetail";
-import { chatSupervisorScenario } from "@/app/agentConfigs/chatSupervisor";
-import { chatLearnScenario } from "@/app/agentConfigs/chatLearn";
-import { customerServiceRetailCompanyName } from "@/app/agentConfigs/customerServiceRetail";
-import { chatSupervisorCompanyName } from "@/app/agentConfigs/chatSupervisor";
-import { simpleHandoffScenario } from "@/app/agentConfigs/simpleHandoff";
+const guardrails = [
+    {
+        name: 'No mention of Dom',
+        execute: async ({ agentOutput }) => {
+            const domInOutput = agentOutput.includes('Dom');
+            return {
+                tripwireTriggered: domInOutput,
+                outputInfo: {
+                    domInOutput,
+                },
+            };
+        },
+    },
+];
 
-/**
- * Map used by connect logic for scenarios defined via the SDK.
- * @type {Record<string, Array<Object>>}
- */
-const sdkScenarioMap = {
-    simpleHandoff: simpleHandoffScenario,
-    customerServiceRetail: customerServiceRetailScenario,
-    chatSupervisor: chatSupervisorScenario,
-    chatLearn: chatLearnScenario,
-    default: chatLearnScenario,
-};
+const weatherTool = tool({
+    name: 'weather',
+    description: 'Get the weather in a given location',
+    parameters: z.object({
+        location: z.string(),
+    }),
+    execute: async ({ location }) => {
+        console.log("location", location);
+        
+        // return backgroundResult(`The weather in ${location} is sunny.`);
+    },
+});
 
-import useAudioDownload from "@/app/hooks/useAudioDownload";
-import { useHandleSessionHistory } from "@/app/hooks/useHandleSessionHistory";
+const weatherExpert = new RealtimeAgent({
+    name: 'Weather Expert',
+    instructions:
+        'You are a weather expert. You are able to answer questions about the weather.',
+    tools: [weatherTool],
+});
 
-/**
- * Main App component that handles the Realtime API connection, agent management,
- * WebRTC audio processing, and UI state management.
- * @returns {JSX.Element} The main application component
- */
-function App() {
-    // ---------------------------------------------------------------------
-    // Codec selector – lets you toggle between wide-band Opus (48 kHz)
-    // and narrow-band PCMU/PCMA (8 kHz) to hear what the agent sounds like on
-    // a traditional phone line and to validate ASR / VAD behaviour under that
-    // constraint.
-    //
-    // We read the `?codec=` query-param and rely on the `changePeerConnection`
-    // hook (configured in `useRealtimeSession`) to set the preferred codec
-    // before the offer/answer negotiation.
-    // ---------------------------------------------------------------------
-    const urlCodec = "opus";
+// To invoke this tool, you can ask a question like "What is the special number?"
+const secretTool = tool({
+    name: 'secret',
+    description: 'A secret tool to tell the special number',
+    parameters: z.object({
+        question: z
+            .string()
+            .describe(
+                'The question to ask the secret tool; mainly about the special number.',
+            ),
+    }),
+    execute: async ({ question }) => {
+        return `The answer to ${question} is 42.`;
+    },
+    // RealtimeAgent handles this approval process within tool_approval_requested events
+    needsApproval: true,
+});
 
-    // Agents SDK doesn't currently support codec selection so it is now forced 
-    // via global codecPatch at module load 
+const agent = new RealtimeAgent({
+    name: 'Greeter',
+    instructions:
+        'You are a friendly assistant. When you use a tool always first say what you are about to do.',
+    tools: [
+        secretTool,
+    ],
+    handoffs: [weatherExpert],
+});
 
-    const {
-        addTranscriptMessage,
-        addTranscriptBreadcrumb,
-    } = useTranscript();
-    const { logClientEvent, logServerEvent } = useEvent();
+export default function Home() {
+    const session = useRef(null);
+    const player = useRef(null);
+    const recorder = useRef(null);
+
+    const [isConnected, setIsConnected] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [outputGuardrailResult, setOutputGuardrailResult] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [history, setHistory] = useState([]);
+    const [mcpTools, setMcpTools] = useState([]);
+    // Image capture handled by CameraCapture component.
 
     const [selectedNews, setSelectedNews] = useState(null)
 
-    /** @type {[string, function]} */
-    const [selectedAgentName, setSelectedAgentName] = useState("");
-    /** @type {[Array<Object>|null, function]} */
-    const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState(null);
-    /** @type {[string, function]} */
-    const [sessionStatus, setSessionStatus] = useState("DISCONNECTED");
-
-    const audioElementRef = useRef(null);
-    // Ref to identify whether the latest agent switch came from an automatic handoff
-    const handoffTriggeredRef = useRef(false);
-
-    const sdkAudioElement = React.useMemo(() => {
-        if (typeof window === 'undefined') return undefined;
-        const el = document.createElement('audio');
-        el.autoplay = true;
-        el.style.display = 'none';
-        document.body.appendChild(el);
-        return el;
-    }, []);
-
-    // Attach SDK audio element once it exists (after first render in browser)
     useEffect(() => {
-        if (sdkAudioElement && !audioElementRef.current) {
-            audioElementRef.current = sdkAudioElement;
-        }
-    }, [sdkAudioElement]);
-
-    const {
-        connect,
-        disconnect,
-        sendUserText,
-        sendEvent,
-        interrupt,
-        mute,
-    } = useRealtimeSession({
-        onConnectionChange: (s) => setSessionStatus(s),
-        onAgentHandoff: (agentName) => {
-            handoffTriggeredRef.current = true;
-            setSelectedAgentName(agentName);
-        },
-    });
-
-    useEffect(()=>{
-
-        if (selectedNews && sessionStatus === 'CONNECTED') {
-            interrupt();
-            try {
-                sendUserText(`Let's discuss the following news article together. Please help me learn English by asking questions about it and correcting my mistakes. Here is the article: ${selectedNews.originalTitle || selectedNews.title} - ${selectedNews.description}`);
-                console.log("send ok")
-            } catch (err) {
-                console.error('Failed to send via SDK', err);
-            }
-        }
-
-    }, [selectedNews, sessionStatus])
-
-    /** @type {[boolean, function]} */
-    const [isEventsPaneExpanded, setIsEventsPaneExpanded] = useState(true);
-    /** @type {[string, function]} */
-    const [userText, setUserText] = useState("");
-    /** @type {[boolean, function]} */
-    const [isPTTActive, setIsPTTActive] = useState(false);
-    /** @type {[boolean, function]} */
-    const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState(false);
-    /** @type {[boolean, function]} */
-    const [isAudioPlaybackEnabled, setIsAudioPlaybackEnabled] = useState(
-        () => {
-            if (typeof window === 'undefined') return true;
-            const stored = localStorage.getItem('audioPlaybackEnabled');
-            return stored ? stored === 'true' : true;
-        },
-    );
-
-    // Initialize the recording hook.
-    const { startRecording, stopRecording, downloadRecording } = useAudioDownload();
-
-    /**
-     * Send a client event to both the SDK and event logging
-     * @param {Object} eventObj - The event object to send
-     * @param {string} eventNameSuffix - Optional suffix for event name
-     */
-    const sendClientEvent = (eventObj, eventNameSuffix = "") => {
-        try {
-            sendEvent(eventObj);
-            logClientEvent(eventObj, eventNameSuffix);
-        } catch (err) {
-            console.error('Failed to send via SDK', err);
-        }
-    };
-
-    useHandleSessionHistory();
-
-    useEffect(() => {
-        const agents = allAgentSets["default"];
-        const agentKeyToUse = agents[0]?.name || "";
-
-        setSelectedAgentName(agentKeyToUse);
-        setSelectedAgentConfigSet(agents);
-    }, []);
-
-    useEffect(() => {
-        if (selectedAgentName && sessionStatus === "DISCONNECTED") {
-            connectToRealtime();
-        }
-    }, [selectedAgentName]);
-
-    useEffect(() => {
-        if (
-            sessionStatus === "CONNECTED" &&
-            selectedAgentConfigSet &&
-            selectedAgentName
-        ) {
-            const currentAgent = selectedAgentConfigSet.find(
-                (a) => a.name === selectedAgentName
-            );
-            addTranscriptBreadcrumb(`Agent: ${selectedAgentName}`, currentAgent);
-            updateSession(!handoffTriggeredRef.current);
-            // Reset flag after handling so subsequent effects behave normally
-            handoffTriggeredRef.current = false;
-        }
-    }, [selectedAgentConfigSet, selectedAgentName, sessionStatus]);
-
-    useEffect(() => {
-        if (sessionStatus === "CONNECTED") {
-            updateSession();
-        }
-    }, [isPTTActive]);
-
-    /**
-     * Fetch ephemeral key from the server for authentication
-     * @returns {Promise<string|null>} The ephemeral key or null if failed
-     */
-    const fetchEphemeralKey = async () => {
-        logClientEvent({ url: "/session" }, "fetch_session_token_request");
-        const tokenResponse = await fetch("/api/session");
-        const data = await tokenResponse.json();
-        logServerEvent(data, "fetch_session_token_response");
-
-        if (!data.client_secret?.value) {
-            logClientEvent(data, "error.no_ephemeral_key");
-            console.error("No ephemeral key provided by the server");
-            setSessionStatus("DISCONNECTED");
-            return null;
-        }
-
-        return data.client_secret.value;
-    };
-
-    /**
-     * Connect to the Realtime API with the selected agent configuration
-     */
-    const connectToRealtime = async () => {
-        const agentSetKey = "default";
-        if (sdkScenarioMap[agentSetKey]) {
-            if (sessionStatus !== "DISCONNECTED") return;
-            setSessionStatus("CONNECTING");
-
-            try {
-                const EPHEMERAL_KEY = await fetchEphemeralKey();
-                if (!EPHEMERAL_KEY) return;
-
-                // Ensure the selectedAgentName is first so that it becomes the root
-                const reorderedAgents = [...sdkScenarioMap[agentSetKey]];
-                const idx = reorderedAgents.findIndex((a) => a.name === selectedAgentName);
-                if (idx > 0) {
-                    const [agent] = reorderedAgents.splice(idx, 1);
-                    reorderedAgents.unshift(agent);
-                }
-
-                const companyName = agentSetKey === 'customerServiceRetail'
-                    ? customerServiceRetailCompanyName
-                    : chatSupervisorCompanyName;
-                const guardrail = createModerationGuardrail(companyName);
-
-                await connect({
-                    getEphemeralKey: async () => EPHEMERAL_KEY,
-                    initialAgents: reorderedAgents,
-                    audioElement: sdkAudioElement,
-                    outputGuardrails: [guardrail],
-                    extraContext: {
-                        addTranscriptBreadcrumb,
+        session.current = new RealtimeSession(agent, {
+            transport: 'websocket',
+            model: 'gpt-realtime',
+            config: {
+                audio: {
+                    output: {
+                        voice: 'cedar',
                     },
+                },
+            },
+        });
+        recorder.current = new WavRecorder({ sampleRate: 24000 });
+        player.current = new WavStreamPlayer({ sampleRate: 24000 });
+
+        session.current.on('audio', (event) => {
+            player.current?.add16BitPCM(event.data, event.responseId);
+        });
+
+        session.current.on('transport_event', (event) => {
+            setEvents((events) => [...events, event]);
+        });
+
+        session.current.on('audio_interrupted', () => {
+            // We only need to interrupt the player if we are already playing
+            // everything else is handled by the session
+            player.current?.interrupt();
+        });
+
+        session.current.on('history_updated', (history) => {
+            setHistory(history);
+        });
+
+        session.current.on('error', (error) => {
+            console.error('error', error);
+        });
+
+        session.current.on(
+            'guardrail_tripped',
+            (_context, _agent, guardrailError) => {
+                setOutputGuardrailResult(guardrailError);
+            },
+        );
+        session.current.on('mcp_tools_changed', (tools) => {
+            setMcpTools(tools.map((t) => t.name));
+        });
+
+        session.current.on(
+            'tool_approval_requested',
+            (_context, _agent, approvalRequest) => {
+                // You'll be prompted when making the tool call that requires approval in web browser.
+                const approved = confirm(
+                    `Approve tool call to ${approvalRequest.approvalItem.rawItem.name} with parameters:\n ${JSON.stringify(approvalRequest.approvalItem.rawItem.arguments, null, 2)}?`,
+                );
+                if (approved) {
+                    session.current?.approve(approvalRequest.approvalItem);
+                } else {
+                    session.current?.reject(approvalRequest.approvalItem);
+                }
+            },
+        );
+
+        session.current.on(
+            'mcp_tool_call_completed',
+            (_context, _agent, toolCall) => {
+                session.current?.transport?.sendEvent({
+                    type: 'response.create',
                 });
-            } catch (err) {
-                console.error("Error connecting via SDK:", err);
-                setSessionStatus("DISCONNECTED");
-            }
-            return;
-        }
-    };
-
-    /**
-     * Disconnect from the Realtime API
-     */
-    const disconnectFromRealtime = () => {
-        disconnect();
-        setSessionStatus("DISCONNECTED");
-        setIsPTTUserSpeaking(false);
-    };
-
-    /**
-     * Send a simulated user message to the agent
-     * @param {string} text - The message text to send
-     */
-    const sendSimulatedUserMessage = (text) => {
-        const id = uuidv4().slice(0, 32);
-        addTranscriptMessage(id, "user", text, true);
-
-        sendClientEvent({
-            type: 'conversation.item.create',
-            item: {
-                id,
-                type: 'message',
-                role: 'user',
-                content: [{ type: 'input_text', text }],
             },
+        );
+    }, []);
+
+    async function record() {
+        await recorder.current?.record(async (data) => {
+            await session.current?.sendAudio(data.mono);
         });
-        sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
-    };
-
-    /**
-     * Send a systemp prompt message to the agent
-     * @param {string} text - The message text to send
-     */
-    const sendSystemPromptMessage = (text) => {
-        const id = uuidv4().slice(0, 32);
-        addTranscriptMessage(id, "user", text, true);
-    };
-
-    /**
-     * Update the session configuration with current settings
-     * @param {boolean} shouldTriggerResponse - Whether to trigger an initial response
-     */
-    const updateSession = (shouldTriggerResponse = false) => {
-        // Reflect Push-to-Talk UI state by (de)activating server VAD on the
-        // backend. The Realtime SDK supports live session updates via the
-        // `session.update` event.
-        const turnDetection = isPTTActive
-            ? null
-            : {
-                type: 'server_vad',
-                threshold: 0.9,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 500,
-                create_response: true,
-            };
-
-        sendEvent({
-            type: 'session.update',
-            session: {
-                turn_detection: turnDetection,
-            },
-        });
-
-        // Send an initial 'hi' message to trigger the agent to greet the user
-        if (shouldTriggerResponse) {
-            sendSimulatedUserMessage('hi');
-        }
-        return;
     }
 
-    /**
-     * Handle sending text message from the user input
-     */
-    const handleSendTextMessage = () => {
-        if (!userText.trim()) return;
-        interrupt();
-
-        try {
-            sendUserText(userText.trim());
-        } catch (err) {
-            console.error('Failed to send via SDK', err);
-        }
-
-        setUserText("");
-    };
-
-    /**
-     * Handle push-to-talk button press down
-     */
-    const handleTalkButtonDown = () => {
-        if (sessionStatus !== 'CONNECTED') return;
-        interrupt();
-
-        setIsPTTUserSpeaking(true);
-        sendClientEvent({ type: 'input_audio_buffer.clear' }, 'clear PTT buffer');
-
-        // No placeholder; we'll rely on server transcript once ready.
-    };
-
-    /**
-     * Handle push-to-talk button release
-     */
-    const handleTalkButtonUp = () => {
-        if (sessionStatus !== 'CONNECTED' || !isPTTUserSpeaking)
-            return;
-
-        setIsPTTUserSpeaking(false);
-        sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT');
-        sendClientEvent({ type: 'response.create' }, 'trigger response PTT');
-    };
-
-    /**
-     * Toggle connection to the Realtime API
-     */
-    const onToggleConnection = () => {
-        if (sessionStatus === "CONNECTED" || sessionStatus === "CONNECTING") {
-            disconnectFromRealtime();
-            setSessionStatus("DISCONNECTED");
+    async function connect() {
+        if (isConnected) {
+            await session.current?.close();
+            await player.current?.interrupt();
+            await recorder.current?.end();
+            setIsConnected(false);
         } else {
-            connectToRealtime();
+            await player.current?.connect();
+            const token = await getToken();
+            await session.current?.connect({
+                apiKey: token,
+            });
+            await recorder.current?.begin();
+            await record();
+            setIsConnected(true);
         }
-    };
+    }
 
-    /**
-     * Handle agent configuration change
-     * @param {React.ChangeEvent<HTMLSelectElement>} e - The select element change event
-     */
-    const handleAgentChange = (e) => {
-        const newAgentConfig = e.target.value;
-        console.log("Switching to agent config:", newAgentConfig);
-
-    };
-
-    /**
-     * Handle selected agent change within the same configuration
-     * @param {React.ChangeEvent<HTMLSelectElement>} e - The select element change event
-     */
-    const handleSelectedAgentChange = (e) => {
-        const newAgentName = e.target.value;
-        // Reconnect session with the newly selected agent as root so that tool
-        // execution works correctly.
-        disconnectFromRealtime();
-        setSelectedAgentName(newAgentName);
-        // connectToRealtime will be triggered by effect watching selectedAgentName
-    };
-
-    /**
-     * Handle codec change - requires page refresh for new connection
-     * @param {string} newCodec - The new codec to use
-     */
-    const handleCodecChange = (newCodec) => {
-        console.log("Codec change requested:", newCodec);
-    };
-
-    useEffect(() => {
-        const storedPushToTalkUI = localStorage.getItem("pushToTalkUI");
-        if (storedPushToTalkUI) {
-            setIsPTTActive(storedPushToTalkUI === "true");
+    async function toggleMute() {
+        if (isMuted) {
+            await record();
+            setIsMuted(false);
+        } else {
+            await recorder.current?.pause();
+            setIsMuted(true);
         }
-        const storedLogsExpanded = localStorage.getItem("logsExpanded");
-        if (storedLogsExpanded) {
-            setIsEventsPaneExpanded(storedLogsExpanded === "true");
-        }
-        const storedAudioPlaybackEnabled = localStorage.getItem(
-            "audioPlaybackEnabled"
-        );
-        if (storedAudioPlaybackEnabled) {
-            setIsAudioPlaybackEnabled(storedAudioPlaybackEnabled === "true");
-        }
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem("pushToTalkUI", isPTTActive.toString());
-    }, [isPTTActive]);
-
-    useEffect(() => {
-        localStorage.setItem("logsExpanded", isEventsPaneExpanded.toString());
-    }, [isEventsPaneExpanded]);
-
-    useEffect(() => {
-        localStorage.setItem(
-            "audioPlaybackEnabled",
-            isAudioPlaybackEnabled.toString()
-        );
-    }, [isAudioPlaybackEnabled]);
-
-    useEffect(() => {
-        if (audioElementRef.current) {
-            if (isAudioPlaybackEnabled) {
-                audioElementRef.current.muted = false;
-                audioElementRef.current.play().catch((err) => {
-                    console.warn("Autoplay may be blocked by browser:", err);
-                });
-            } else {
-                // Mute and pause to avoid brief audio blips before pause takes effect.
-                audioElementRef.current.muted = true;
-                audioElementRef.current.pause();
-            }
-        }
-
-        // Toggle server-side audio stream mute so bandwidth is saved when the
-        // user disables playback. 
-        try {
-            mute(!isAudioPlaybackEnabled);
-        } catch (err) {
-            console.warn('Failed to toggle SDK mute', err);
-        }
-    }, [isAudioPlaybackEnabled]);
-
-    // Ensure mute state is propagated to transport right after we connect or
-    // whenever the SDK client reference becomes available.
-    useEffect(() => {
-        if (sessionStatus === 'CONNECTED') {
-            try {
-                mute(!isAudioPlaybackEnabled);
-            } catch (err) {
-                console.warn('mute sync after connect failed', err);
-            }
-        }
-    }, [sessionStatus, isAudioPlaybackEnabled]);
-
-    useEffect(() => {
-        if (sessionStatus === "CONNECTED" && audioElementRef.current?.srcObject) {
-            // The remote audio stream from the audio element.
-            /** @type {MediaStream} */
-            const remoteStream = audioElementRef.current.srcObject;
-            startRecording(remoteStream);
-        }
-
-        // Clean up on unmount or when sessionStatus is updated.
-        return () => {
-            stopRecording();
-        };
-    }, [sessionStatus]);
-
-    const agentSetKey = "default";
+    }
 
     return (
         <div className="min-h-screen bg-background">
@@ -540,7 +255,7 @@ function App() {
 
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
                     <div className="flex-1 lg:w-[70%] flex flex-col">
-                        <Transcript
+                        {/* <Transcript
                             userText={userText}
                             setUserText={setUserText}
                             onSendMessage={handleSendTextMessage}
@@ -549,12 +264,46 @@ function App() {
                             selectedNews={selectedNews}
                             sessionStatus={sessionStatus}
                             onToggleConnection={onToggleConnection}
+                        /> */}
+                        <History
+                            title="Realtime Demo via WebSocket"
+                            isConnected={isConnected}
+                            isMuted={isMuted}
+                            toggleMute={toggleMute}
+                            connect={connect}
+                            history={history}
+                            outputGuardrailResult={outputGuardrailResult}
+                            events={events}
+                            mcpTools={mcpTools}
                         />
                     </div>
                 </div>
             </div>
         </div>
-    );
-}
+    )
 
-export default App;
+    //   return (
+    //     <div className="relative">
+    //       <App
+    //         title="Realtime Demo via WebSocket"
+    //         isConnected={isConnected}
+    //         isMuted={isMuted}
+    //         toggleMute={toggleMute}
+    //         connect={connect}
+    //         history={history}
+    //         outputGuardrailResult={outputGuardrailResult}
+    //         events={events}
+    //         mcpTools={mcpTools}
+    //       />
+    //       <div className="fixed bottom-4 right-4 z-50">
+    //         <CameraCapture
+    //           disabled={!isConnected}
+    //           onCapture={(dataUrl) => {
+    //             if (!session.current) return;
+    //             session.current.addImage(dataUrl, { triggerResponse: false });
+    //           }}
+    //         />
+    //       </div>
+    //     </div>
+    //   );
+}
