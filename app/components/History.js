@@ -13,6 +13,7 @@ export function History({
     outputGuardrailResult,
     events,
     mcpTools = [],
+    sendTextMessage,
 }) {
     // Avoid hydration mismatches when layout changes between server and client
     const [mounted, setMounted] = useState(false);
@@ -23,6 +24,11 @@ export function History({
             id="chatHistory"
         >
             {history.map((item) => {
+
+                if (item.type === 'function_call') {
+                    return <FunctionCallMessage message={item} key={item.itemId} />;
+                }
+
                 if (item.type === 'message') {
                     return (
                         <TextMessage
@@ -56,7 +62,7 @@ export function History({
                 return null;
             })}
 
-            <button onClick={()=>{
+            <button onClick={() => {
                 connect()
             }} >
                 {isConnected ? "disconnct" : "connect"}
