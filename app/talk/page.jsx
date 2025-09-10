@@ -456,7 +456,7 @@ export default function Home() {
                     </div>
 
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
-                    <div className="flex-1 lg:w-[70%] flex flex-col">
+                    <div className="flex-1 lg:w-[70%] flex flex-col h-full">
                         <History
                             title="Realtime Demo via WebSocket"
                             isConnected={isConnected}
