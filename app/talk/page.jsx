@@ -285,8 +285,42 @@ export default function Home() {
             player.current?.interrupt();
         });
 
-        session.current.on('history_updated', (history) => {
-            setHistory(history);
+        session.current.on('history_updated', (newHistory) => {
+            console.log("update history", newHistory);
+            setHistory(prevHistory => {
+                // 创建一个映射来保存已有的transcript内容
+                const existingTranscripts = new Map();
+                prevHistory.forEach(item => {
+                    if (item.type === 'message' && item.role === 'assistant') {
+                        item.content.forEach(content => {
+                            if (content.type === 'output_audio' && content.transcript) {
+                                existingTranscripts.set(item.itemId, content.transcript);
+                            }
+                        });
+                    }
+                });
+
+                // 更新新历史，保留已有的transcript
+                const updatedHistory = newHistory.map(item => {
+                    if (item.type === 'message' && item.role === 'assistant' && existingTranscripts.has(item.itemId)) {
+                        return {
+                            ...item,
+                            content: item.content.map(content => {
+                                if (content.type === 'output_audio' && !content.transcript) {
+                                    return {
+                                        ...content,
+                                        transcript: existingTranscripts.get(item.itemId)
+                                    };
+                                }
+                                return content;
+                            })
+                        };
+                    }
+                    return item;
+                });
+
+                return updatedHistory;
+            });
         });
 
         session.current.on('error', (error) => {
@@ -375,69 +409,69 @@ export default function Home() {
                 text: input,
             }],
             itemId: id,
-    };
+        };
 
-    // 追加到 history
-    setHistory(prevHistory => [...prevHistory, msgItem]);
-}
+        // 追加到 history
+        setHistory(prevHistory => [...prevHistory, msgItem]);
+    }
 
-return (
-    <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b border-border bg-card hidden md:block">
-            <div className="container mx-auto px-4 py-4">
-                <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
-                <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>
-            </div>
-        </header>
+    return (
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <header className="border-b border-border bg-card hidden md:block">
+                <div className="container mx-auto px-4 py-4">
+                    <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
+                    <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>
+                </div>
+            </header>
 
-        {/* Main Content */}
-        <div className="container mx-auto px-4 py-6">
-            <div className="flex flex-col lg:flex-row gap-6 h-screen lg:h-[calc(100vh-140px)]">
-                {/* Mobile News Cards - 在中等屏幕以下显示 */}
-                <div className="lg:hidden">
-                    <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                    <div className="overflow-x-auto pb-4 -mx-4 px-4">
-                        <NewsFeed
-                            onArticleSelect={setSelectedNews}
-                            selectedNews={selectedNews}
-                            targetLanguage="en"
-                            nativeLanguage="zh-CN"
-                            isMobile={true}
+            {/* Main Content */}
+            <div className="container mx-auto px-4 py-6">
+                <div className="flex flex-col lg:flex-row gap-6 h-screen lg:h-[calc(100vh-140px)]">
+                    {/* Mobile News Cards - 在中等屏幕以下显示 */}
+                    <div className="lg:hidden">
+                        <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
+                        <div className="overflow-x-auto pb-4 -mx-4 px-4">
+                            <NewsFeed
+                                onArticleSelect={setSelectedNews}
+                                selectedNews={selectedNews}
+                                targetLanguage="en"
+                                nativeLanguage="zh-CN"
+                                isMobile={true}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Desktop News Cards - 在大屏幕以上显示 */}
+                    <div className="hidden lg:flex lg:w-[30%] flex-col">
+                        <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
+                        <div className="flex-1 overflow-y-auto">
+                            <NewsFeed
+                                onArticleSelect={setSelectedNews}
+                                selectedNews={selectedNews}
+                                targetLanguage="en"
+                                nativeLanguage="zh-CN"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Chat Interface - Full width on mobile, 70% on desktop */}
+                    <div className="flex-1 lg:w-[70%] flex flex-col">
+                        <History
+                            title="Realtime Demo via WebSocket"
+                            isConnected={isConnected}
+                            isMuted={isMuted}
+                            toggleMute={toggleMute}
+                            connect={connect}
+                            history={history}
+                            outputGuardrailResult={outputGuardrailResult}
+                            events={events}
+                            mcpTools={mcpTools}
+                            sendTextMessage={sendTextMessage}
                         />
                     </div>
-                </div>
-
-                {/* Desktop News Cards - 在大屏幕以上显示 */}
-                <div className="hidden lg:flex lg:w-[30%] flex-col">
-                    <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                    <div className="flex-1 overflow-y-auto">
-                        <NewsFeed
-                            onArticleSelect={setSelectedNews}
-                            selectedNews={selectedNews}
-                            targetLanguage="en"
-                            nativeLanguage="zh-CN"
-                        />
-                    </div>
-                </div>
-
-                {/* Chat Interface - Full width on mobile, 70% on desktop */}
-                <div className="flex-1 lg:w-[70%] flex flex-col">
-                    <History
-                        title="Realtime Demo via WebSocket"
-                        isConnected={isConnected}
-                        isMuted={isMuted}
-                        toggleMute={toggleMute}
-                        connect={connect}
-                        history={history}
-                        outputGuardrailResult={outputGuardrailResult}
-                        events={events}
-                        mcpTools={mcpTools}
-                        sendTextMessage={sendTextMessage}
-                    />
                 </div>
             </div>
         </div>
-    </div>
-)
+    )
 }

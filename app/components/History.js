@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import { TextMessage } from './TextMessage';
+import { FunctionCallMessage } from './FunctionCallMessage';
 
 export function History({
     title = 'Realtime Agent Demo',
