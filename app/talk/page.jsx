@@ -163,6 +163,72 @@ export default function Home() {
     // Image capture handled by CameraCapture component.
 
     const [selectedNews, setSelectedNews] = useState(null)
+    const selectedNewsRef = useRef(null)
+
+    // localStorage helpers
+    const saveConversationToStorage = (newsKey, conversation) => {
+        try {
+            const conversations = JSON.parse(localStorage.getItem('chatConversations') || '{}');
+            conversations[newsKey] = {
+                ...conversation,
+                lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('chatConversations', JSON.stringify(conversations));
+        } catch (error) {
+            console.error('Failed to save conversation to localStorage:', error);
+        }
+    };
+
+    const loadConversationFromStorage = (newsKey) => {
+        try {
+            const conversations = JSON.parse(localStorage.getItem('chatConversations') || '{}');
+            return conversations[newsKey] || null;
+        } catch (error) {
+            console.error('Failed to load conversation from localStorage:', error);
+            return null;
+        }
+    };
+
+    const saveSelectedNewsToStorage = (news) => {
+        try {
+            localStorage.setItem('selectedNews', JSON.stringify(news));
+        } catch (error) {
+            console.error('Failed to save selectedNews to localStorage:', error);
+        }
+    };
+
+    const loadSelectedNewsFromStorage = () => {
+        try {
+            const saved = localStorage.getItem('selectedNews');
+            return saved ? JSON.parse(saved) : null;
+        } catch (error) {
+            console.error('Failed to load selectedNews from localStorage:', error);
+            return null;
+        }
+    };
+
+    // 加载初始状态
+    useEffect(() => {
+        const savedNews = loadSelectedNewsFromStorage();
+        if (savedNews) {
+            setSelectedNews(savedNews);
+        }
+    }, []);
+
+    // 当选择新闻时保存并加载对应的对话历史
+    useEffect(() => {
+        if (selectedNews) {
+            selectedNewsRef.current = selectedNews; // 更新 ref
+            saveSelectedNewsToStorage(selectedNews);
+            const newsKey = selectedNews.title || selectedNews.id || 'default';
+            const savedConversation = loadConversationFromStorage(newsKey);
+            if (savedConversation && savedConversation.history) {
+                setHistory(savedConversation.history);
+            } else {
+                setHistory([]);
+            }
+        }
+    }, [selectedNews]);
 
     useEffect(() => {
         if (!session.current) return
@@ -239,6 +305,16 @@ export default function Home() {
                             item.role === 'user' &&
                             item.content[0]?.type === 'input_text');
                 });
+
+                // 保存到 localStorage
+                const currentSelectedNews = selectedNewsRef.current;
+                if (currentSelectedNews) {
+                    const newsKey = currentSelectedNews.title || currentSelectedNews.id || 'default';
+                    saveConversationToStorage(newsKey, {
+                        history: filteredHistory,
+                        selectedNews: currentSelectedNews
+                    });
+                }
 
                 return filteredHistory;
             });
@@ -318,7 +394,7 @@ export default function Home() {
     }
 
     const sendTextMessage = function (input) {
-        if (session.current) return
+        if (!session.current) return
 
         session.current.sendMessage(input)
         const id = uuidv4().slice(0, 32);
@@ -333,7 +409,21 @@ export default function Home() {
         };
 
         // 追加到 history
-        setHistory(prevHistory => [...prevHistory, msgItem]);
+        setHistory(prevHistory => {
+            const newHistory = [...prevHistory, msgItem];
+
+            // 保存到 localStorage
+            const currentSelectedNews = selectedNewsRef.current;
+            if (currentSelectedNews) {
+                const newsKey = currentSelectedNews.title || currentSelectedNews.id || 'default';
+                saveConversationToStorage(newsKey, {
+                    history: newHistory,
+                    selectedNews: currentSelectedNews
+                });
+            }
+
+            return newHistory;
+        });
     }
 
     return (
@@ -341,8 +431,15 @@ export default function Home() {
             {/* Header */}
             <header className="border-b border-border bg-card hidden md:block">
                 <div className="container mx-auto px-4 py-4">
-                    <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
-                    <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
+                            <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>
+                        </div>
+                        <a href="/history" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                            对话历史
+                        </a>
+                    </div>
                 </div>
             </header>
 
@@ -351,7 +448,12 @@ export default function Home() {
                 <div className="flex flex-col lg:flex-row gap-6 h-screen lg:h-[calc(100vh-140px)]">
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
                     <div className="lg:hidden">
-                        <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-foreground">Latest News</h2>
+                            <a href="/history" className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
+                                历史
+                            </a>
+                        </div>
                         <div className="overflow-x-auto pb-4 -mx-4 px-4">
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
