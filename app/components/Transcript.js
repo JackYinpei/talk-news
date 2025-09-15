@@ -66,7 +66,7 @@ function Transcript({
     }
 
     setPrevLogs(transcriptItems);
-  }, [transcriptItems]);
+  }, [transcriptItems, prevLogs]);
 
   // Autofocus on text box input on load
   useEffect(() => {

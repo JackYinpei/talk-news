@@ -213,7 +213,7 @@ export default function Home() {
                 <span className="ml-2 text-zinc-300">4.9/5 from 1000+ learners</span>
               </div>
               <blockquote className="text-lg text-zinc-200 mb-4">
-                "TalkNews helped me improve my English speaking skills faster than any other method. The AI conversations feel natural and the news topics keep me engaged."
+                &ldquo;TalkNews helped me improve my English speaking skills faster than any other method. The AI conversations feel natural and the news topics keep me engaged.&rdquo;
               </blockquote>
               <cite className="text-zinc-400">— Sarah K., International Student</cite>
             </CardContent>

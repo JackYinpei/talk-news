@@ -42,7 +42,7 @@ export function useRealtimeSession(callbacks = {}) {
       callbacks.onConnectionChange?.(s);
       logClientEvent({}, s);
     },
-    [callbacks],
+    [callbacks, logClientEvent],
   );
 
   const { logServerEvent } = useEvent();
@@ -85,7 +85,7 @@ export function useRealtimeSession(callbacks = {}) {
   // Wrapper to pass current codec param
   const applyCodec = useCallback(
     (pc) => applyCodecPreferences(pc, codecParamRef.current),
-    [],
+    [applyCodecPreferences],
   );
 
   /**
@@ -120,7 +120,7 @@ export function useRealtimeSession(callbacks = {}) {
       // additional transport events
       sessionRef.current.on("transport_event", handleTransportEvent);
     }
-  }, [sessionRef.current]);
+  }, [sessionRef.current, handleAgentHandoff, handleTransportEvent, historyHandlers.handleAgentToolEnd, historyHandlers.handleAgentToolStart, historyHandlers.handleGuardrailTripped, historyHandlers.handleHistoryAdded, historyHandlers.handleHistoryUpdated, logServerEvent]);
 
   /**
    * Connect to realtime session
@@ -170,7 +170,7 @@ export function useRealtimeSession(callbacks = {}) {
       await sessionRef.current.connect({ apiKey: ek });
       updateStatus('CONNECTED');
     },
-    [callbacks, updateStatus],
+    [updateStatus, applyCodec],
   );
 
   const disconnect = useCallback(() => {
@@ -203,7 +203,7 @@ export function useRealtimeSession(callbacks = {}) {
   const sendUserText = useCallback((text) => {
     assertconnected();
     sessionRef.current.sendMessage(text);
-  }, []);
+  }, [assertconnected]);
 
   /**
    * Send event to session

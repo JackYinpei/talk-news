@@ -41,7 +41,7 @@ function Events({ isExpanded }) {
     }
 
     setPrevEventLogs(loggedEvents);
-  }, [loggedEvents, isExpanded]);
+  }, [loggedEvents, isExpanded, prevEventLogs.length]);
 
   return (
     <div
