@@ -124,7 +124,9 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: '#cbd5e1 #f1f5f9',
-              touchAction: 'pan-x pinch-zoom'
+              touchAction: 'pan-x pinch-zoom',
+              overscrollBehaviorX: 'contain',
+              overscrollBehaviorY: 'none'
             }}
           >
             {categories.map((category) => (
@@ -183,10 +185,12 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     <div>
       <CategorySelector />
       <div 
-        className={isMobile ? "flex gap-3 overflow-x-auto overflow-y-auto px-2" : "space-y-4 px-2 py-2"}
+        className={isMobile ? "flex gap-3 overflow-x-auto px-2" : "space-y-4 px-2 py-2"}
         style={isMobile ? {
           touchAction: 'pan-x pinch-zoom',
-          scrollBehavior: 'smooth'
+          scrollBehavior: 'smooth',
+          overscrollBehaviorX: 'contain',
+          overscrollBehaviorY: 'none'
         } : {}}
       >
         {articles.map((article) => {

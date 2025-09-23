@@ -21,7 +21,7 @@ export function History({
     const [inputMessage, setInputMessage] = useState('');
     useEffect(() => setMounted(true), []);
     return (
-        <div className="flex flex-col h-full max-w-2xl">
+        <div className="flex flex-col h-full min-h-0 max-w-2xl">
             <div
                 className="overflow-y-auto pl-4 flex-1 rounded-lg bg-white space-y-4 min-h-0"
                 id="chatHistory"

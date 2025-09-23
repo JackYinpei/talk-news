@@ -376,6 +376,7 @@ export default function Home() {
             const token = await getToken();
             await session.current?.connect({
                 apiKey: token,
+                url: "wss://talknews.yasobi.xyz/v1/realtime?model=gpt-realtime"
             });
             await recorder.current?.begin();
             await record();
@@ -444,8 +445,8 @@ export default function Home() {
             </header>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 py-6 flex flex-col h-screen lg:h-auto">
-                <div className="flex flex-col lg:flex-row gap-6 flex-1 lg:h-[calc(100vh-140px)]">
+            <div className="container mx-auto px-4 py-6 flex flex-col h-screen lg:h-auto lg:min-h-0">
+                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 lg:h-[calc(100vh-140px)]">
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
                     <div className="lg:hidden flex-shrink-0">
                         <div className="flex items-center justify-between mb-4">
@@ -466,9 +467,12 @@ export default function Home() {
                     </div>
 
                     {/* Desktop News Cards - 在大屏幕以上显示 */}
-                    <div className="hidden lg:flex lg:w-[30%] flex-col">
+                    <div className="hidden lg:flex lg:w-[30%] flex-col min-h-0 h-[calc(100vh-140px)]">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
-                        <div className="flex-1 overflow-y-auto">
+                        <div
+                            className="min-h-0 h-full overflow-y-auto overscroll-contain"
+                            style={{ overscrollBehaviorY: 'contain' }}
+                        >
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
                                 selectedNews={selectedNews}
@@ -479,7 +483,7 @@ export default function Home() {
                     </div>
 
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
-                    <div className="flex-1 lg:w-[70%] flex flex-col min-h-0">
+                    <div className="flex-1 lg:w-[70%] flex flex-col min-h-0 lg:h-[calc(100vh-140px)]">
                         <History
                             title="Realtime Demo via WebSocket"
                             isConnected={isConnected}
