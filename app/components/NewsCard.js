@@ -25,30 +25,28 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           "font-semibold text-card-foreground leading-tight line-clamp-2",
           compact ? "text-base" : "text-lg"
         )}>{news.title}</h3>
-        <div className="flex gap-3">
+        <div className={cn(
+          "relative",
+          isSelected && "overflow-y-auto max-h-64"
+        )}>
           {news.urlToImage && (
-            <div className="flex-shrink-0">
-              <img 
-                src={news.urlToImage} 
-                alt={news.title}
-                className={cn(
-                  "rounded object-cover",
-                  compact ? "w-16 h-16" : "w-20 h-20"
-                )}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            </div>
+            <img
+              src={news.urlToImage}
+              alt={news.title}
+              className={cn(
+                "float-left mr-3 mb-2 rounded object-cover",
+                compact ? "w-16 h-16" : "w-20 h-20"
+              )}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
           )}
-          <div className="flex-1 min-w-0">
-            <div className={cn(
-              "text-muted-foreground leading-relaxed",
-              isSelected && "overflow-y-auto",
-              compact ? "text-xs line-clamp-5" : "text-sm max-h-64"
-            )}>
-              {isSelected ? news.description : `${news.description.substring(0, 250)}...`}
-            </div>
+          <div className={cn(
+            "text-muted-foreground leading-relaxed",
+            compact ? "text-xs" : "text-sm"
+          )}>
+            {isSelected ? news.description : `${news.description.substring(0, 250)}...`}
           </div>
         </div>
       </div>

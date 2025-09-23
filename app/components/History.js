@@ -67,19 +67,20 @@ export function History({
 
             </div>
             
-            <div className="bg-white border-t p-4">
-                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                    <button 
-                        onClick={() => connect()} 
-                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                            isConnected 
-                                ? 'bg-red-500 hover:bg-red-600 text-white' 
+            <div className="bg-white border-t p-3">
+                <div className="flex gap-2 items-center">
+                    <button
+                        onClick={() => connect()}
+                        className={`w-10 h-10 rounded-full font-medium transition-colors flex items-center justify-center text-lg ${
+                            isConnected
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
                                 : 'bg-blue-500 hover:bg-blue-600 text-white'
                         }`}
+                        title={isConnected ? "Disconnect" : "Connect"}
                     >
-                        {isConnected ? "Disconnect" : "Connect"}
+                        {isConnected ? "🌐" : "📶"}
                     </button>
-                    
+
                     <input
                         type="text"
                         value={inputMessage}
@@ -93,7 +94,19 @@ export function History({
                         placeholder="Type your message..."
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     />
-                    
+
+                    <button
+                        onClick={toggleMute}
+                        className={`w-10 h-10 rounded-full font-medium transition-colors flex items-center justify-center text-lg ${
+                            isMuted
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'bg-gray-500 hover:bg-gray-600 text-white'
+                        }`}
+                        title={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted ? "🔇" : "🎤"}
+                    </button>
+
                     <button
                         onClick={() => {
                             if (inputMessage.trim()) {
@@ -102,7 +115,7 @@ export function History({
                             }
                         }}
                         disabled={!inputMessage.trim()}
-                        className="px-6 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
                     >
                         Send
                     </button>

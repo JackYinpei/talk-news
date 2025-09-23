@@ -444,10 +444,10 @@ export default function Home() {
             </header>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 py-6">
-                <div className="flex flex-col lg:flex-row gap-6 h-screen lg:h-[calc(100vh-140px)]">
+            <div className="container mx-auto px-4 py-6 flex flex-col h-screen lg:h-auto">
+                <div className="flex flex-col lg:flex-row gap-6 flex-1 lg:h-[calc(100vh-140px)]">
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
-                    <div className="lg:hidden">
+                    <div className="lg:hidden flex-shrink-0">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-semibold text-foreground">Latest News</h2>
                             <a href="/history" className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
@@ -479,7 +479,7 @@ export default function Home() {
                     </div>
 
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
-                    <div className="flex-1 lg:w-[70%] flex flex-col h-full">
+                    <div className="flex-1 lg:w-[70%] flex flex-col min-h-0">
                         <History
                             title="Realtime Demo via WebSocket"
                             isConnected={isConnected}

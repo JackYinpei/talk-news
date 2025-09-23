@@ -65,16 +65,19 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
         if (sourcesIndex !== -1) {
           description = description.substring(0, sourcesIndex);
         }
-        
-        // 清理HTML标签和引用标记
-        description = description.replace(/<[^>]*>/g, '').trim();
-        // 清理各种引用标记格式: [site.com#1], [site.com], [#1], etc.
-        description = description.replace(/\[[^\]]*(?:\.com|\.org|\.net|#\d+)[^\]]*\]/g, '').trim();
-        // 清理多余的空白字符
-        description = description.replace(/\s+/g, ' ').trim();
-        
+
+        // 先提取图片URL（在清理HTML标签之前）
         const imgMatch = description.match(/<img src='([^']*)'/);
         const urlToImage = imgMatch ? imgMatch[1] : null;
+
+        // 清理HTML标签
+        description = description.replace(/<[^>]*>/g, '').trim();
+
+        // 清理各种引用标记格式，包括但不限于: [lemonde.fr#1], [scmp.com#1], [site.com], [#1], etc.
+        description = description.replace(/\[[^\]]*?(?:#\d+|\.[a-z]{2,4})[^\]]*?\]/gi, '').trim();
+
+        // 清理多余的空白字符
+        description = description.replace(/\s+/g, ' ').trim();
         
         return {
           id: `${category}-${index}`,
@@ -104,35 +107,45 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     }
   }, [selectedCategory, fetchNews]);
 
-  const CategorySelector = () => (
-    <div className={`mb-4 ${isMobile ? "px-2" : "px-2"} ${isMobile ? "sticky top-0 bg-background z-10" : ""}`}>
-      <div className="relative">
-        <div 
-          className="flex overflow-x-auto gap-2 pb-2"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#cbd5e1 #f1f5f9',
-            touchAction: 'pan-x pinch-zoom'
-          }}
-        >
-          {categories.map((category) => (
-            <button
-              key={category.categoryId}
-              onClick={() => setSelectedCategory(category.categoryId)}
-              disabled={loading}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                selectedCategory === category.categoryId
-                  ? "bg-primary text-primary-foreground shadow-md scale-105"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground hover:scale-102"
-              } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {category.categoryName}
-            </button>
-          ))}
+  const CategorySelector = () => {
+    const hasSelectedNews = isMobile && selectedNews;
+
+    return (
+      <div
+        className={`transition-all duration-500 ease-in-out ${isMobile ? "px-2 sticky top-0 bg-background z-10" : "px-2"} ${
+          hasSelectedNews
+            ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden'
+            : 'max-h-20 opacity-100 pointer-events-auto mb-4'
+        }`}
+      >
+        <div className="relative flex items-center min-h-0">
+          <div
+            className="flex overflow-x-auto gap-2 py-2"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#cbd5e1 #f1f5f9',
+              touchAction: 'pan-x pinch-zoom'
+            }}
+          >
+            {categories.map((category) => (
+              <button
+                key={category.categoryId}
+                onClick={() => setSelectedCategory(category.categoryId)}
+                disabled={loading}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  selectedCategory === category.categoryId
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "bg-secondary hover:bg-secondary/80 text-secondary-foreground hover:scale-102"
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {category.categoryName}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -194,16 +207,14 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
         return (
           <div 
             key={article.id}
-            className={isMobile ? `flex-shrink-0 transition-all duration-300 ${
-              isSelected ? "w-[400px]" : "w-[280px]"
-            }` : `transition-all duration-300 ${
+            className={isMobile ? `flex-shrink-0 transition-all duration-300 w-[260px] h-48` : `transition-all duration-300 ${
               isSelected ? "h-96" : "h-48"
             }`}
           >
             <NewsCard
               news={newsData}
               isSelected={isSelected}
-              onSelect={() => onArticleSelect && onArticleSelect(newsData)}
+              onSelect={() => onArticleSelect && onArticleSelect(isSelected ? null : newsData)}
               compact={isMobile}
               expandedContent={isSelected && isMobile}
             />
