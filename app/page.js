@@ -57,8 +57,13 @@ export default function Home() {
                 Reviews
               </Link>
               <Link href="/talk">
-                <Button variant="outline" className="border-zinc-700 text-white hover:bg-zinc-800">
+                <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
                   Start Learning
+                </Button>
+              </Link>
+              <Link href="/sign-in">
+                <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                  SignIn
                 </Button>
               </Link>
             </nav>
@@ -81,12 +86,12 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/talk">
-              <Button size="lg" className="bg-white text-black hover:bg-zinc-200 font-semibold px-8 py-4 text-lg">
+              <Button size="lg" className="bg-white text-black hover:bg-zinc-800 hover:text-white font-semibold px-8 py-4 text-lg">
                 Start Free Conversation
                 <MessageCircle className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="border-zinc-700 text-white hover:bg-zinc-800 px-8 py-4 text-lg">
+            <Button variant="outline" size="lg" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white px-8 py-4 text-lg">
               Watch Demo
               <Zap className="ml-2 h-5 w-5" />
             </Button>
