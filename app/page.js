@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Users, Globe, Zap, CheckCircle, Star } from "lucide-react";
+import { auth, signOut } from "@/app/auth";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -61,11 +63,19 @@ export default function Home() {
                   Start Learning
                 </Button>
               </Link>
-              <Link href="/sign-in">
-                <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
-                  SignIn
-                </Button>
-              </Link>
+              {session?.user ? (
+                <form action={async () => { 'use server'; await signOut(); }}>
+                  <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                    SignOut
+                  </Button>
+                </form>
+              ) : (
+                <Link href="/sign-in">
+                  <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                    SignIn
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
         </div>

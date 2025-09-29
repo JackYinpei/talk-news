@@ -133,18 +133,34 @@ const agent = new RealtimeAgent({
             },
             execute: async (input) => {
                 const { userMessage, items, context } = input;
-                
-                // Log the tool call parameters for debugging as requested by user
-                console.log('extractUnfamiliarEnglish tool called with parameters:', {
+
+                const payload = {
                     items,
                     context,
-                    items,
-                    timestamp: new Date().toISOString()
-                });
-                
-                return {
-                    resp: "saved in db"
+                    timestamp: new Date().toISOString(),
+                    userMessage: userMessage ?? null,
                 };
+
+                // Log for debugging as requested
+                console.log('extractUnfamiliarEnglish tool called with parameters:', payload);
+
+                try {
+                    const res = await fetch('/api/learning/unfamiliar-english', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        console.error('Failed to save unfamiliar English data:', err);
+                        return { resp: 'save_failed', error: err?.error || 'Unknown error' };
+                    }
+                    const data = await res.json().catch(() => ({}));
+                    return { resp: 'saved_in_db', data };
+                } catch (e) {
+                    console.error('Error calling save API:', e);
+                    return { resp: 'save_error', error: e?.message || String(e) };
+                }
             },
         }),
     ],
@@ -273,6 +289,8 @@ export default function Home() {
         });
 
         session.current.on('history_updated', (newHistory) => {
+            console.log("history updated", newHistory);
+            
             setHistory(prevHistory => {
                 // 创建一个映射来保存已有的transcript内容
                 const existingTranscripts = new Map();

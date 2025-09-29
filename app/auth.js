@@ -37,6 +37,11 @@ async function signInWithSupabase(email, password) {
     email: user.email,
     name: user.user_metadata?.name || user.email?.split("@")[0] || null,
     image: user.user_metadata?.avatar_url || null,
+    // pass through Supabase tokens for RLS-backed DB access in API routes
+    supabaseAccessToken: data?.access_token || null,
+    supabaseRefreshToken: data?.refresh_token || null,
+    supabaseTokenType: data?.token_type || null,
+    supabaseExpiresIn: data?.expires_in || null,
   }
 }
 
@@ -71,6 +76,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user?.email) token.email = user.email
       if (user?.name) token.name = user.name
       if (user?.image) token.picture = user.image
+      // propagate Supabase tokens (when signing in via Credentials)
+      if (user?.supabaseAccessToken) token.supabaseAccessToken = user.supabaseAccessToken
+      if (user?.supabaseRefreshToken) token.supabaseRefreshToken = user.supabaseRefreshToken
+      if (user?.supabaseTokenType) token.supabaseTokenType = user.supabaseTokenType
+      if (user?.supabaseExpiresIn) token.supabaseExpiresIn = user.supabaseExpiresIn
       return token
     },
     async session({ session, token }) {
@@ -80,6 +90,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.name = token.name
         session.user.image = token.picture
       }
+      // expose Supabase access token to server routes
+      if (token?.supabaseAccessToken) session.supabaseAccessToken = token.supabaseAccessToken
       return session
     },
   },
