@@ -1,7 +1,7 @@
 'use server';
 
 export async function getToken() {
-  return "ek_68da1c86eac88191981f13e9e4b347f5"
+  return "ek_68da2ae26ae0819192c528bf1deb001c"
 }
 
 // export async function getToken() {

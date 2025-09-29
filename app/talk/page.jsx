@@ -85,24 +85,9 @@ const agent = new RealtimeAgent({
             parameters: {
                 type: 'object',
                 properties: {
-                    items: {
-                        type: 'array',
-                        description: 'List of unfamiliar or interesting elements identified from conversation',
-                        item: {
-                            type: "object",
-                            properties: {
-                                text: {
-                                    type: "string",
-                                    description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
-                                },
-                                type: {
-                                    type: "string",
-                                    enum: ["word", "phrase", "grammar", "other"],
-                                    description: "The category of the unfamiliar element"
-                                }
-                            },
-                            required: ["text", "type"]
-                        }
+                    userMessage: {
+                        type: 'string',
+                        description: 'The user\'s original message that was analyzed',
                     },
                     items: {
                         type: 'array',
