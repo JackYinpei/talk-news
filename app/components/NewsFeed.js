@@ -91,7 +91,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
       });
 
       setArticles(newArticles);
-      translateArticleTitles(newArticles);
+      // translateArticleTitles(newArticles);
 
     } catch (err) {
       console.error('Failed to fetch news:', err);

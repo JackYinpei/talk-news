@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { WavRecorder, WavStreamPlayer } from 'wavtools';
 import { v4 as uuidv4 } from "uuid";
+import { useSession } from "next-auth/react"
+ 
 
 
 // UI components
@@ -48,34 +50,34 @@ const guardrails = [
 const agent = new RealtimeAgent({
     name: 'LanguageLearnTeacher',
     instructions:
-        `
-你是ChatLearn，一位友好的英语对话导师，通过自然对话帮助用户练习英语。
-
-**核心角色**：主导沉浸式英语对话，提供针对性学习支持。
-
-**关键行为**：
-- 用中英文夹杂的方式进行交谈，然后根据用户偏好，采取更英文或者更中文的表达方式
-- 在每个实质性用户消息后使用extractUnfamiliarEnglish工具
-- 通过追问延长练习时间
-- 给予温和纠正，避免信息过载
-- 变化词汇/句式作为学习示例
-
-**控场与话题管理**：
-- 由你控制对话流程和话题
-- 保持讨论与语言学习情境相关
-- 当用户偏题时重新引导："很有趣！让我们通过讨论[学习相关话题]来练习英语"
-- 引导对话向词汇丰富、教育性的主题发展
-- 全程保持学习焦点
-
-**学习内容格式**：
-1. 用中英文夹杂的方式进行交谈
-2. 词汇呈现格式：English word (中文翻译)
-3. 保持解释简洁且贴合语境
-4. 识别并强化用户的语言模式
-
-**工具使用**：在每个包含实质英语内容的用户消息后调用extractUnfamiliarEnglish，识别学习机会。
-
-保持鼓励和耐心，同时维持清晰的对话主导权以获得最佳学习效果。`,
+    `
+    你是ChatLearn，一位友好的英语对话导师，通过自然对话帮助用户练习英语。
+    
+    **核心角色**：主导沉浸式英语对话，提供针对性学习支持。
+    
+    **关键行为**：
+    - 用中英文夹杂的方式进行交谈，然后根据用户偏好，采取更英文或者更中文的表达方式
+    - 在每个实质性用户消息后使用extractUnfamiliarEnglish工具
+    - 通过追问延长练习时间
+    - 给予温和纠正，避免信息过载
+    - 变化词汇/句式作为学习示例
+    
+    **控场与话题管理**：
+    - 由你控制对话流程和话题
+    - 保持讨论与语言学习情境相关
+    - 当用户偏题时重新引导："很有趣！让我们通过讨论[学习相关话题]来练习英语"
+    - 引导对话向词汇丰富、教育性的主题发展
+    - 全程保持学习焦点
+    
+    **学习内容格式**：
+    1. 用中英文夹杂的方式进行交谈
+    2. 词汇呈现格式：English word (中文翻译)
+    3. 保持解释简洁且贴合语境
+    4. 识别并强化用户的语言模式
+    
+    **工具使用**：在每个包含实质英语内容的用户消息后调用extractUnfamiliarEnglish，识别学习机会。
+    
+    保持鼓励和耐心，同时维持清晰的对话主导权以获得最佳学习效果。`,
     tools: [
         tool({
             name: 'extractUnfamiliarEnglish',
@@ -131,7 +133,7 @@ const agent = new RealtimeAgent({
             },
             execute: async (input) => {
                 const { userMessage, items, context } = input;
-
+                
                 // Log the tool call parameters for debugging as requested by user
                 console.log('extractUnfamiliarEnglish tool called with parameters:', {
                     items,
@@ -139,7 +141,7 @@ const agent = new RealtimeAgent({
                     items,
                     timestamp: new Date().toISOString()
                 });
-
+                
                 return {
                     resp: "saved in db"
                 };
@@ -150,10 +152,14 @@ const agent = new RealtimeAgent({
 });
 
 export default function Home() {
+    const { data: userSession } = useSession()
+    useEffect(() => {
+        console.log("user session info", userSession)
+    }, [userSession])
     const session = useRef(null);
     const player = useRef(null);
     const recorder = useRef(null);
-
+    
     const [isConnected, setIsConnected] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [outputGuardrailResult, setOutputGuardrailResult] = useState(null);

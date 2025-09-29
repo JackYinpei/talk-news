@@ -1,4 +1,5 @@
 import "./globals.css";
+import { SessionProvider } from "next-auth/react"
 
 export const metadata = {
   title: "TalkNews - Chat with AI to Learn English | AI English Tutor",
@@ -59,7 +60,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+      <SessionProvider>
         {children}
+      </SessionProvider>
       </body>
     </html>
   );
