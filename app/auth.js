@@ -1,7 +1,86 @@
 
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
- 
+import Credentials from "next-auth/providers/credentials"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+
+async function signInWithSupabase(email, password) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Missing Supabase env: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY")
+  }
+  const url = `${supabaseUrl}/auth/v1/token?grant_type=password`
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+    },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  })
+
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    // Common Supabase error codes/messages can be surfaced
+    const message = data?.error_description || data?.msg || "Invalid credentials"
+    throw new Error(message)
+  }
+
+  // data.user should contain supabase user info when successful
+  const user = data?.user
+  if (!user?.id || !user?.email) return null
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata?.name || user.email?.split("@")[0] || null,
+    image: user.user_metadata?.avatar_url || null,
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [Google],
+  providers: [
+    Google,
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: async (credentials) => {
+        const email = credentials?.email
+        const password = credentials?.password
+        if (!email || !password) return null
+        try {
+          const user = await signInWithSupabase(email, password)
+          return user
+        } catch (e) {
+          // Return null to trigger CredentialsSignin; we also log for server insight
+          console.error("Credentials authorize failed:", e?.message || e)
+          return null
+        }
+      },
+    }),
+  ],
+  session: { strategy: "jwt" },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user?.id) token.uid = user.id
+      if (user?.email) token.email = user.email
+      if (user?.name) token.name = user.name
+      if (user?.image) token.picture = user.image
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.uid
+        session.user.email = token.email
+        session.user.name = token.name
+        session.user.image = token.picture
+      }
+      return session
+    },
+  },
 })

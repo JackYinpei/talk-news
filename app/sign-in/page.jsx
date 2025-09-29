@@ -1,6 +1,6 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { LogIn, MessageCircle, ShieldCheck } from "lucide-react"
@@ -17,10 +17,30 @@ import {
 
 export default function SignIn() {
   const [isPending, startTransition] = useTransition()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
 
   const handleGoogleSignIn = () => {
     startTransition(() => {
       void signIn("google", { callbackUrl: "/talk" })
+    })
+  }
+
+  const handleEmailSignIn = (e) => {
+    e.preventDefault()
+    setError("")
+    startTransition(async () => {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+      if (res?.error) {
+        setError(res.error === "CredentialsSignin" ? "Invalid email or password (or email not confirmed)." : res.error)
+        return
+      }
+      window.location.assign("/talk")
     })
   }
 
@@ -71,6 +91,42 @@ export default function SignIn() {
               <GoogleLogo />
               <span>{isPending ? "Redirecting…" : "Continue with Google"}</span>
             </Button>
+            <div className="relative my-2 text-center text-white/50 text-xs">
+              <span className="px-2 bg-transparent">OR</span>
+            </div>
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-md border border-white/20 bg-transparent px-3 py-2 outline-none focus:border-white/50"
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-md border border-white/20 bg-transparent px-3 py-2 outline-none focus:border-white/50"
+                  placeholder="••••••••"
+                />
+              </div>
+              {error ? (
+                <p className="text-sm text-red-400">{error}</p>
+              ) : null}
+              <Button type="submit" className="w-full bg-white text-black hover:bg-white/90" size="lg" disabled={isPending}>
+                <LogIn className="mr-2 size-4" />
+                <span>{isPending ? "Signing in…" : "Sign in with Email"}</span>
+              </Button>
+            </form>
             <div className="flex items-center justify-center gap-2 text-sm text-white/60">
               <ShieldCheck className="size-4" />
               <span>Your email is only used to authenticate with Google.</span>
@@ -83,12 +139,17 @@ export default function SignIn() {
                 Contact support
               </Link>
             </p>
-            <Button variant="ghost" asChild className="text-white/70 hover:text-white">
-              <Link href="/">
-                <LogIn className="mr-2 size-4" />
-                Back to home
-              </Link>
-            </Button>
+            <div className="flex gap-4">
+              <Button variant="ghost" asChild className="text-white/70 hover:text-white">
+                <Link href="/">
+                  <LogIn className="mr-2 size-4" />
+                  Back to home
+                </Link>
+              </Button>
+              <Button variant="ghost" asChild className="text-white/70 hover:text-white">
+                <Link href="/sign-up">Create account</Link>
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </div>
