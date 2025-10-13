@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 import { TextMessage } from './TextMessage';
 import { FunctionCallMessage } from './FunctionCallMessage';
@@ -18,13 +18,29 @@ export function History({
 }) {
     // Avoid hydration mismatches when layout changes between server and client
     const [mounted, setMounted] = useState(false);
+    const containerRef = useRef(null);
     const [inputMessage, setInputMessage] = useState('');
     useEffect(() => setMounted(true), []);
+
+    // Auto-scroll to bottom when history updates (covers AI subtitles and STT updates)
+    useEffect(() => {
+        if (!mounted) return;
+        const el = containerRef.current;
+        if (!el) return;
+        // Ensure scroll runs after DOM updates
+        const id = requestAnimationFrame(() => {
+            try {
+                el.scrollTop = el.scrollHeight;
+            } catch {}
+        });
+        return () => cancelAnimationFrame(id);
+    }, [history, mounted]);
     return (
         <div className="flex flex-col h-full min-h-0">
             <div
-                className="overflow-y-auto pl-4 flex-1 rounded-lg bg-white space-y-4 min-h-0"
+                className="overflow-y-auto pl-4 flex-1 rounded-lg bg-white space-y-4 min-h-0 border"
                 id="chatHistory"
+                ref={containerRef}
             >
                 {history.map((item) => {
 

@@ -50,7 +50,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     setArticles([]);
 
     try {
-      const response = await fetch(`https://kite.kagi.com/${category}.xml`);
+      const response = await fetch(`/api/news?category=${encodeURIComponent(category)}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`Failed to fetch news for category: ${category}`);
       }

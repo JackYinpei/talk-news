@@ -42,7 +42,7 @@ curl -X POST https://api.openai.com/v1/realtime/client_secrets \
    -d '{
      "session": {
        "type": "realtime",
-       "model": "gpt-realtime"
+       "model": "gpt-gpt-realtime-mini"
      }
    }'
 ```
