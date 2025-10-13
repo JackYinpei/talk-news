@@ -58,6 +58,7 @@ const agent = new RealtimeAgent({
     **关键行为**：
     - 用中英文夹杂的方式进行交谈，然后根据用户偏好，采取更英文或者更中文的表达方式
     - 在每个实质性用户消息后使用extractUnfamiliarEnglish工具
+    - 经常思考要想起使用extractUnfamiliarEnglish工具，这个工具你要经常使用。
     - 通过追问延长练习时间
     - 给予温和纠正，避免信息过载
     - 变化词汇/句式作为学习示例
@@ -81,7 +82,7 @@ const agent = new RealtimeAgent({
     tools: [
         tool({
             name: 'extractUnfamiliarEnglish',
-            description: 'Analyzes user English text to identify unfamiliar words, phrases, or grammar patterns that could be learning opportunities. Call this when users raise questions about words, grammar, or phrases',
+            description: 'Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns ',
             parameters: {
                 type: 'object',
                 properties: {

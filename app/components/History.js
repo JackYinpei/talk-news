@@ -38,7 +38,7 @@ export function History({
     return (
         <div className="flex flex-col h-full min-h-0">
             <div
-                className="overflow-y-auto pl-4 flex-1 rounded-lg bg-white space-y-4 min-h-0 border"
+                className="overflow-y-auto px-4 flex-1 rounded-lg bg-white space-y-4 min-h-0 border pt-3 pb-8 sm:pb-10 md:pb-12"
                 id="chatHistory"
                 ref={containerRef}
             >
