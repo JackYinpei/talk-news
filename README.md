@@ -1,51 +1,48 @@
-# Talk News
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FJackYinpei%2Ftalk-news)
+## Getting Started
 
-Talk News 是一款创新的语言学习应用，它将实时新闻阅读与互动式对话相结合，帮助用户在真实语境中学习和练习外语。
+First, run the development server:
 
-## 功能特性
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-- **双语新闻流**：应用主界面左侧展示实时新闻，用户可以选择源语言和目标语言，所有新闻标题和摘要都会被翻译成目标语言，方便对照学习。
-- **互动对话**：主界面右侧是一个聊天机器人，用户可以就所读新闻或任何其他话题，用所学语言进行开放式对话。
-- **个性化语言设置**：首次使用时，用户需要选择自己的母语和想要学习的语言，应用会根据用户的选择提供个性化的学习体验。
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## 快速开始
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-1.  **安装依赖**
-    ```bash
-    npm install
-    ```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-2.  **运行开发服务器**
-    ```bash
-    npm run dev
-    ```
+## Learn More
 
-3.  在浏览器中打开 `http://localhost:3000` 查看应用。
+To learn more about Next.js, take a look at the following resources:
 
-## 应用截图
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### 1. 语言选择
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-首次进入应用，系统会引导用户选择他们的母语和想要学习的语言。
+## Deploy on Vercel
 
-![语言选择](/public/readme-images/languageselect.png)
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### 2. 新闻阅读与实时对话
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-主界面分为左右两部分，左边是实时新闻流，右边是与AI的对话窗口。
-
-![主界面](/public/readme-images/newsfeed.png)
-
-### 3. 实时对话
-
-用户可以随时在右侧的对话框中用目标语言进行练习。
-
-![实时对话](/public/readme-images/realtimechat.png)
-
-## 技术栈
-
-- [Next.js](https://nextjs.org/) - React 框架
-- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
-- [Google Generative AI](https://ai.google.dev/) - 提供对话和翻译能力
+```
+curl -X POST https://api.openai.com/v1/realtime/client_secrets \
+   -H "Authorization: Bearer $OPENAI_API_KEY" \
+   -H "Content-Type: application/json" \
+   -d '{
+     "session": {
+       "type": "realtime",
+       "model": "gpt-gpt-realtime-mini"
+     }
+   }'
+```

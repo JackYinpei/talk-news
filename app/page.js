@@ -1,230 +1,302 @@
-'use client';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Users, Globe, Zap, CheckCircle, Star } from "lucide-react";
+import { auth, signOut } from "@/app/auth";
 
-import Link from 'next/link';
-import { useState } from 'react';
-
-export default function LandingPage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+export default async function Home() {
+  const session = await auth();
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "TalkNews",
+    "description": "Chat with AI to learn English through current news conversations. AI-powered English learning platform for vocabulary building and speaking practice.",
+    "url": "https://talknews.ai",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "1000"
+    },
+    "keywords": "chat with ai to learn english, ai english tutor, english learning, ai conversation, speak english practice",
+    "inLanguage": "en",
+    "potentialAction": {
+      "@type": "UseAction",
+      "target": "https://talknews.ai/talk"
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-black/80 backdrop-blur-md fixed w-full z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="text-2xl font-bold text-blue-400">Talk News</div>
+      <header className="border-b border-zinc-800">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <MessageCircle className="h-8 w-8 text-white" />
+              <span className="text-2xl font-bold">TalkNews</span>
             </div>
-            
-            <nav className="hidden md:flex space-x-8">
-              <a href="#features" className="text-gray-300 hover:text-white transition-colors">特性</a>
-              <a href="#how-it-works" className="text-gray-300 hover:text-white transition-colors">工作原理</a>
-              <a href="#about" className="text-gray-300 hover:text-white transition-colors">关于</a>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/talk" 
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full font-medium transition-colors"
-              >
-                开始学习
+            <nav className="hidden md:flex items-center space-x-6">
+              <Link href="#features" className="text-zinc-300 hover:text-white transition-colors">
+                Features
               </Link>
-              
-              <button
-                className="md:hidden text-gray-300 hover:text-white"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
+              <Link href="#how-it-works" className="text-zinc-300 hover:text-white transition-colors">
+                How it Works
+              </Link>
+              <Link href="#testimonials" className="text-zinc-300 hover:text-white transition-colors">
+                Reviews
+              </Link>
+              <Link href="/talk">
+                <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                  Start Learning
+                </Button>
+              </Link>
+              {session?.user ? (
+                <form action={async () => { 'use server'; await signOut(); }}>
+                  <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                    SignOut
+                  </Button>
+                </form>
+              ) : (
+                <Link href="/sign-in">
+                  <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
+                    SignIn
+                  </Button>
+                </Link>
+              )}
+            </nav>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-800">
-            <div className="px-4 py-2 space-y-1">
-              <a href="#features" className="block px-3 py-2 text-gray-300 hover:text-white">特性</a>
-              <a href="#how-it-works" className="block px-3 py-2 text-gray-300 hover:text-white">工作原理</a>
-              <a href="#about" className="block px-3 py-2 text-gray-300 hover:text-white">关于</a>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Hero Section */}
-      <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6">
-            通过
-            <span className="text-blue-400 block">实时新闻</span>
-            学习语言
+      <section className="container mx-auto px-4 py-20 text-center">
+        <div className="max-w-4xl mx-auto">
+          <Badge className="mb-6 bg-zinc-800 text-white border-zinc-700">
+            🚀 AI-Powered English Learning
+          </Badge>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            Chat with AI to
+            <span className="text-transparent bg-gradient-to-r from-white to-zinc-400 bg-clip-text"> Learn English</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-            将新闻阅读与AI对话相结合，在真实语境中提升你的外语能力。
-            每一条新闻都是你的语言学习材料。
+          <p className="text-xl md:text-2xl text-zinc-300 mb-8 leading-relaxed">
+            Master English through real-time conversations about current news. Practice speaking, improve vocabulary, and gain confidence with our AI English tutor.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/talk" 
-              className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full text-lg font-medium transition-all transform hover:scale-105"
-            >
-              立即开始学习
+            <Link href="/talk">
+              <Button size="lg" className="bg-white text-black hover:bg-zinc-800 hover:text-white font-semibold px-8 py-4 text-lg">
+                Start Free Conversation
+                <MessageCircle className="ml-2 h-5 w-5" />
+              </Button>
             </Link>
-            <button 
-              onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-              className="border border-gray-600 hover:border-gray-400 text-white px-8 py-4 rounded-full text-lg font-medium transition-all"
-            >
-              了解更多
-            </button>
+            <Button variant="outline" size="lg" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white px-8 py-4 text-lg">
+              Watch Demo
+              <Zap className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">为什么选择 Talk News？</h2>
+      <section id="features" className="container mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">Why Choose TalkNews?</h2>
+          <p className="text-xl text-zinc-300 max-w-2xl mx-auto">
+            Learn English naturally through AI conversations about real-world topics
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+            <CardContent className="p-6">
+              <MessageCircle className="h-12 w-12 text-white mb-4" />
+              <h3 className="text-2xl font-semibold mb-4 text-white">Real-Time Conversations</h3>
+              <p className="text-zinc-300">
+                Practice speaking English with AI that understands context and provides instant feedback on your pronunciation and grammar.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+            <CardContent className="p-6">
+              <Globe className="h-12 w-12 text-white mb-4" />
+              <h3 className="text-2xl font-semibold mb-4 text-white">Current News Topics</h3>
+              <p className="text-zinc-300">
+                Stay informed while learning. Discuss trending news stories to build vocabulary and cultural understanding.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+            <CardContent className="p-6">
+              <Users className="h-12 w-12 text-white mb-4" />
+              <h3 className="text-2xl font-semibold mb-4 text-white">Personalized Learning</h3>
+              <p className="text-zinc-300">
+                AI adapts to your learning level and interests, providing customized conversations that match your progress.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section id="how-it-works" className="bg-zinc-950 py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
+            <p className="text-xl text-zinc-300 max-w-2xl mx-auto">
+              Three simple steps to start improving your English today
+            </p>
+          </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-xl bg-gray-800 hover:bg-gray-750 transition-colors">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+            <div className="text-center">
+              <div className="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                1
               </div>
-              <h3 className="text-xl font-semibold mb-3">双语新闻流</h3>
-              <p className="text-gray-300">
-                实时新闻内容，支持多种语言对照阅读，
-                让你在真实语境中学习新词汇和表达方式。
+              <h3 className="text-2xl font-semibold mb-4">Choose a News Topic</h3>
+              <p className="text-zinc-300">
+                Select from current news stories that interest you, from technology to global events.
               </p>
             </div>
-
-            <div className="text-center p-6 rounded-xl bg-gray-800 hover:bg-gray-750 transition-colors">
-              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+            <div className="text-center">
+              <div className="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                2
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI 互动对话</h3>
-              <p className="text-gray-300">
-                基于所读新闻内容与AI进行对话练习，
-                提升口语表达能力和语言理解水平。
+              <h3 className="text-2xl font-semibold mb-4">Start Talking</h3>
+              <p className="text-zinc-300">
+                Engage in natural conversation with our AI tutor about the topic you chose.
               </p>
             </div>
-
-            <div className="text-center p-6 rounded-xl bg-gray-800 hover:bg-gray-750 transition-colors">
-              <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+            <div className="text-center">
+              <div className="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                3
               </div>
-              <h3 className="text-xl font-semibold mb-3">个性化学习</h3>
-              <p className="text-gray-300">
-                根据你的母语和目标语言提供定制化内容，
-                让学习更高效、更符合个人需求。
+              <h3 className="text-2xl font-semibold mb-4">Learn & Improve</h3>
+              <p className="text-zinc-300">
+                Receive real-time feedback, learn new vocabulary, and track your progress.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">三步开始你的语言学习之旅</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
-                1
+      {/* Benefits */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Perfect for English Learners</h2>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+                <span className="text-lg">Practice speaking without judgment</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">选择语言</h3>
-              <p className="text-gray-300">
-                设置你的母语和想要学习的目标语言，
-                系统将为你提供个性化的学习体验。
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
-                2
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+                <span className="text-lg">Learn vocabulary in context</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">阅读新闻</h3>
-              <p className="text-gray-300">
-                浏览实时新闻内容，每篇文章都提供双语对照，
-                帮助你理解和学习新的词汇表达。
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
-                3
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+                <span className="text-lg">Improve pronunciation with AI feedback</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">实践对话</h3>
-              <p className="text-gray-300">
-                与AI助手讨论你所阅读的新闻内容，
-                在真实对话中练习和巩固所学知识。
-              </p>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+                <span className="text-lg">Stay updated with global news</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+                <span className="text-lg">Learn at your own pace, 24/7</span>
+              </div>
             </div>
           </div>
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardContent className="p-8">
+              <div className="flex items-center mb-4">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-current" />
+                  ))}
+                </div>
+                <span className="ml-2 text-zinc-300">4.9/5 from 1000+ learners</span>
+              </div>
+              <blockquote className="text-lg text-zinc-200 mb-4">
+                &ldquo;TalkNews helped me improve my English speaking skills faster than any other method. The AI conversations feel natural and the news topics keep me engaged.&rdquo;
+              </blockquote>
+              <cite className="text-zinc-400">— Sarah K., International Student</cite>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">准备好开始你的语言学习之旅了吗？</h2>
-          <p className="text-xl mb-8 opacity-90">
-            加入我们，通过最新新闻提升你的语言技能
+      <section className="bg-gradient-to-r from-zinc-900 to-black py-20">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Master English?</h2>
+          <p className="text-xl text-zinc-300 mb-8 max-w-2xl mx-auto">
+            Join thousands of learners who are improving their English through AI-powered conversations
           </p>
-          <Link 
-            href="/talk" 
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 rounded-full text-lg font-semibold transition-all transform hover:scale-105 inline-block"
-          >
-            立即开始免费学习
+          <Link href="/talk">
+            <Button size="lg" className="bg-white text-black hover:bg-zinc-200 font-semibold px-8 py-4 text-lg">
+              Start Your Free Conversation
+              <MessageCircle className="ml-2 h-5 w-5" />
+            </Button>
           </Link>
+          <p className="text-sm text-zinc-400 mt-4">No credit card required • Start learning immediately</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer id="about" className="bg-gray-900 border-t border-gray-800 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+      <footer className="border-t border-zinc-800 bg-black">
+        <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
-            <div className="md:col-span-2">
-              <div className="text-2xl font-bold text-blue-400 mb-4">Talk News</div>
-              <p className="text-gray-300 mb-4">
-                通过实时新闻学习语言的创新平台。
-                让每一天的新闻阅读都成为你语言学习的进步。
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <MessageCircle className="h-6 w-6" />
+                <span className="text-xl font-bold">TalkNews</span>
+              </div>
+              <p className="text-zinc-400">
+                AI-powered English learning through news conversations
               </p>
             </div>
-            
             <div>
-              <h4 className="font-semibold mb-4">产品</h4>
-              <ul className="space-y-2 text-gray-300">
-                <li><a href="#features" className="hover:text-white transition-colors">功能特性</a></li>
-                <li><a href="#how-it-works" className="hover:text-white transition-colors">工作原理</a></li>
-                <li><Link href="/talk" className="hover:text-white transition-colors">开始学习</Link></li>
+              <h4 className="font-semibold mb-4">Features</h4>
+              <ul className="space-y-2 text-zinc-400">
+                <li><Link href="#" className="hover:text-white transition-colors">AI Conversations</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">News Topics</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Progress Tracking</Link></li>
               </ul>
             </div>
-            
             <div>
-              <h4 className="font-semibold mb-4">技术栈</h4>
-              <ul className="space-y-2 text-gray-300">
-                <li>Next.js</li>
-                <li>React</li>
-                <li>Tailwind CSS</li>
-                <li>Google AI</li>
+              <h4 className="font-semibold mb-4">Learning</h4>
+              <ul className="space-y-2 text-zinc-400">
+                <li><Link href="/talk" className="hover:text-white transition-colors">Start Learning</Link></li>
+                <li><Link href="/history" className="hover:text-white transition-colors">Conversation History</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Tips & Guides</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-zinc-400">
+                <li><Link href="#" className="hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Talk News. 让学习语言变得更有趣。</p>
+          <div className="border-t border-zinc-800 mt-12 pt-8 text-center text-zinc-400">
+            <p>&copy; 2024 TalkNews. All rights reserved. Chat with AI to learn English.</p>
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,28 +1,55 @@
-'use client';
+"use client"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
-export default function NewsCard({ article, onClick }) {
+export function NewsCard({ news, isSelected, onSelect, compact = false }) {
   return (
-    <div
-      className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer mb-4 flow-root"
-      onClick={onClick}
-    >
-      <div className="w-24 h-24 flex-shrink-0 float-left mr-4 mb-2">
-        {article.urlToImage ? (
-          <img
-            src={article.urlToImage}
-            alt={article.title}
-            className="w-full h-full object-cover rounded-md"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
-            <span className="text-xs text-gray-500">No Image</span>
-          </div>
-        )}
-      </div>
-      <h3 className="text-lg font-bold text-gray-800">{article.title}</h3>
-      {article.translatedTitle && (
-        <p className="text-sm text-gray-500 mt-1">{article.translatedTitle}</p>
+    <Card
+      className={cn(
+        "cursor-pointer transition-all duration-200 hover:shadow-md w-full h-full flex flex-col overflow-hidden p-0",
+        isSelected ? "ring-2 ring-primary bg-accent/10" : "hover:bg-card/80"
       )}
-    </div>
-  );
+      onClick={(e) => {
+        onSelect && onSelect(e)
+      }}
+    >
+      <div className="p-4 pb-0">
+        <div className="flex items-center justify-between mb-1">
+          <Badge variant="secondary" className="text-xs">
+            {news.category}
+          </Badge>
+          <span className="text-xs text-muted-foreground">{new Date(news.date).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
+        </div>
+        <h3 className={cn(
+          "font-semibold text-card-foreground leading-tight line-clamp-2",
+          compact ? "text-base" : "text-lg"
+        )}>{news.title}</h3>
+        <div className={cn(
+          "relative",
+          isSelected && "overflow-y-auto max-h-64"
+        )}>
+          {news.urlToImage && (
+            <img
+              src={news.urlToImage}
+              alt={news.title}
+              className={cn(
+                "float-left mr-3 mb-2 rounded object-cover",
+                compact ? "w-16 h-16" : "w-20 h-20"
+              )}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          )}
+          <div className={cn(
+            "text-muted-foreground leading-relaxed",
+            compact ? "text-xs" : "text-sm"
+          )}>
+            {isSelected ? news.description : `${news.description.substring(0, 250)}...`}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
 }
