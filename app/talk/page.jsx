@@ -248,7 +248,7 @@ export default function Home() {
     useEffect(() => {
         session.current = new RealtimeSession(agent, {
             transport: 'websocket',
-            model: 'gpt-gpt-realtime-mini',
+            model: 'gpt-realtime-mini',
             config: {
                 audio: {
                     output: {
@@ -386,7 +386,7 @@ export default function Home() {
             const token = await getToken();
             await session.current?.connect({
                 apiKey: token,
-                url: "wss://talknews.yasobi.xyz/v1/realtime?model=gpt-gpt-realtime-mini"
+                url: "wss://talknews.yasobi.xyz/v1/realtime?model=gpt-realtime-mini"
             });
             await recorder.current?.begin();
             await record();

@@ -1,7 +1,7 @@
 'use server';
 
 // export async function getToken() {
-//   return "ek_68ec8d48bea08191941ac4457c23a943"
+//   return "ek_68f4974adf7481918f2ae99ec826bbc5"
 // }
 
 export async function getToken() {
@@ -21,7 +21,7 @@ export async function getToken() {
       body: JSON.stringify({
         session: {
           type: 'realtime',
-          model: 'gpt-gpt-realtime-mini',
+          model: 'gpt-realtime-mini',
           // tracing: {
           //   workflow_name: 'Realtime Next Demo',
           // },
