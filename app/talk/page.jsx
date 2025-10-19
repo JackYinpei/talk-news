@@ -455,17 +455,17 @@ export default function Home() {
             </header>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 py-6 flex flex-col h-screen lg:h-auto lg:min-h-0">
-                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 lg:h-[calc(100vh-140px)]">
+            <div className="container mx-auto px-4 py-2 flex flex-col h-screen lg:h-auto lg:min-h-0">
+                <div className="flex flex-col lg:flex-row lg:gap-6 flex-1 min-h-0 lg:h-[calc(100vh-140px)]">
                     {/* Mobile News Cards - 在中等屏幕以下显示 */}
                     <div className="lg:hidden flex-shrink-0">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between">
                             <h2 className="text-xl font-semibold text-foreground">Latest News</h2>
                             <a href="/history" className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
                                 历史
                             </a>
                         </div>
-                        <div className="overflow-x-auto pb-4 -mx-4 px-4">
+                        <div className="overflow-x-auto pb-2 -mx-4 px-4">
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
                                 selectedNews={selectedNews}

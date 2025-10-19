@@ -14,7 +14,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
         onSelect && onSelect(e)
       }}
     >
-      <div className="p-4 pb-0">
+      <div className="p-2 pb-1 flex flex-col h-full">
         <div className="flex items-center justify-between mb-1">
           <Badge variant="secondary" className="text-xs">
             {news.category}
@@ -25,9 +25,10 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           "font-semibold text-card-foreground leading-tight line-clamp-2",
           compact ? "text-base" : "text-lg"
         )}>{news.title}</h3>
+        {/* Give the description its own scrollable region so longer text stays visible inside the fixed-height card */}
         <div className={cn(
-          "relative",
-          isSelected && "overflow-y-auto max-h-64"
+          "relative mt-1 flex-1 min-h-0",
+          isSelected && "overflow-y-auto"
         )}>
           {news.urlToImage && (
             <img
@@ -44,7 +45,8 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
           )}
           <div className={cn(
             "text-muted-foreground leading-relaxed",
-            compact ? "text-xs" : "text-sm"
+            compact ? "text-xs" : "text-sm",
+            isSelected && "pr-1"
           )}>
             {isSelected ? news.description : `${news.description.substring(0, 250)}...`}
           </div>
