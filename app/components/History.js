@@ -20,6 +20,7 @@ export function History({
     const [mounted, setMounted] = useState(false);
     const containerRef = useRef(null);
     const [inputMessage, setInputMessage] = useState('');
+    const [isInputFocused, setIsInputFocused] = useState(false);
     useEffect(() => setMounted(true), []);
 
     // Auto-scroll to bottom when history updates (covers AI subtitles and STT updates)
@@ -81,10 +82,10 @@ export function History({
                     return null;
                 })}
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1 mt-2 items-center">
                 <button
                     onClick={() => connect()}
-                    className={`w-10 lg:basis-1/10 h-10 rounded-full lg:rounded-lg font-medium transition-colors flex items-center justify-center text-lg ${isConnected
+                    className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isConnected
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-blue-500 hover:bg-blue-600 text-white'
                         }`}
@@ -96,7 +97,7 @@ export function History({
                 
                 <button
                     onClick={toggleMute}
-                    className={`w-10 lg:basis-1/10 h-10 rounded-full lg:rounded-lg font-medium transition-colors flex items-center justify-center text-lg ${isMuted
+                    className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isMuted
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-gray-500 hover:bg-gray-600 text-white'
                         }`}
@@ -116,8 +117,10 @@ export function History({
                             setInputMessage('');
                         }
                     }}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
 
 
@@ -129,7 +132,7 @@ export function History({
                         }
                     }}
                     disabled={!inputMessage.trim()}
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                    className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex-shrink-0"
                 >
                     Send
                 </button>

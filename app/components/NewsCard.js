@@ -8,7 +8,7 @@ export function NewsCard({ news, isSelected, onSelect, compact = false }) {
     <Card
       className={cn(
         "cursor-pointer transition-all duration-200 hover:shadow-md w-full h-full flex flex-col overflow-hidden p-0",
-        isSelected ? "ring-2 ring-primary bg-accent/10" : "hover:bg-card/80"
+        isSelected ? "ring-2 ring-inset ring-primary bg-accent/10" : "hover:bg-card/80"
       )}
       onClick={(e) => {
         onSelect && onSelect(e)
