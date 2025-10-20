@@ -57,3 +57,14 @@ npm run start
 2. 确保 `AUTH_URL` 与部署域名完全一致（包含协议），否则 OAuth 回调可能失败。
 3. 若不启用 Google 登录，可省略 `AUTH_GOOGLE_ID/SECRET`，应用会自动仅保留邮箱登录。
 4. 使用 `npm run build` 预构建，确认通过后再进行上线。
+```
+curl -X POST https://api.openai.com/v1/realtime/client_secrets \
+   -H "Authorization: Bearer $token" \
+   -H "Content-Type: application/json" \
+   -d '{
+     "session": {
+       "type": "realtime",
+       "model": "gpt-realtime-mini"
+     }
+   }'
+```

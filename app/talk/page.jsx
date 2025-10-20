@@ -230,7 +230,6 @@ function createLanguageAgent(nativeLabel, targetLabel, uiLangCode) {
 export default function Home() {
     const { data: userSession } = useSession()
     const { learningLanguage, nativeLanguage } = useLanguage()
-    console.log("nativeLanguage, learningLanguage ",nativeLanguage, learningLanguage);
     const uiLangCode = (nativeLanguage?.code || 'en').toLowerCase().startsWith('zh')
         ? 'zh'
         : (nativeLanguage?.code || 'en').toLowerCase().startsWith('ja')
@@ -242,9 +241,6 @@ export default function Home() {
         ja: { history: '履歴', historyShort: '履歴' },
     }[uiLangCode]
     
-    useEffect(() => {
-        console.log("user session info", userSession)
-    }, [userSession])
     const session = useRef(null);
     const player = useRef(null);
     const recorder = useRef(null);
