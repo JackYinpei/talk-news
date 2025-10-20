@@ -19,6 +19,7 @@ import { History } from "@/app/components/History";
 
 import { getToken } from "@/app/server/token.action";
 import { CombineInitPrompt } from '@/lib/utils';
+import { useLanguage } from '@/app/contexts/LanguageContext';
 
 const refundBackchannel = tool({
     name: 'refundBackchannel',
@@ -155,6 +156,7 @@ const agent = new RealtimeAgent({
 
 export default function Home() {
     const { data: userSession } = useSession()
+    const { learningLanguage, nativeLanguage } = useLanguage()
     useEffect(() => {
         console.log("user session info", userSession)
     }, [userSession])
@@ -469,8 +471,8 @@ export default function Home() {
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
                                 selectedNews={selectedNews}
-                                targetLanguage="en"
-                                nativeLanguage="zh-CN"
+                                targetLanguage={learningLanguage?.code || 'en'}
+                                nativeLanguage={nativeLanguage?.code || 'zh-CN'}
                                 isMobile={true}
                             />
                         </div>
@@ -486,8 +488,8 @@ export default function Home() {
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
                                 selectedNews={selectedNews}
-                                targetLanguage="en"
-                                nativeLanguage="zh-CN"
+                                targetLanguage={learningLanguage?.code || 'en'}
+                                nativeLanguage={nativeLanguage?.code || 'zh-CN'}
                             />
                         </div>
                     </div>

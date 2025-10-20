@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Users, Globe, Zap, CheckCircle, Star } from "lucide-react";
 import { auth, signOut } from "@/app/auth";
+import StartLearningWithLanguage from "@/app/components/StartLearningWithLanguage";
 
 export default async function Home() {
   const session = await auth();
@@ -58,11 +59,7 @@ export default async function Home() {
               <Link href="#testimonials" className="text-zinc-300 hover:text-white transition-colors">
                 Reviews
               </Link>
-              <Link href="/talk">
-                <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">
-                  Start Learning
-                </Button>
-              </Link>
+              <StartLearningWithLanguage />
               {session?.user ? (
                 <form action={async () => { 'use server'; await signOut(); }}>
                   <Button variant="outline" className="bg-white text-black border-zinc-700 hover:bg-zinc-800 hover:text-white font-semibold">

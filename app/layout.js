@@ -1,5 +1,7 @@
 import "./globals.css";
 import { SessionProvider } from "next-auth/react"
+import { headers } from 'next/headers'
+import { LanguageProvider } from '@/app/contexts/LanguageContext'
 
 export const metadata = {
   title: "TalkNews - Chat with AI to Learn English | AI English Tutor",
@@ -57,12 +59,16 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const h = headers()
+  const acceptLanguage = h.get('accept-language') || ''
   return (
     <html lang="en">
       <body>
-      <SessionProvider>
-        {children}
-      </SessionProvider>
+        <SessionProvider>
+          <LanguageProvider initialAcceptLanguage={acceptLanguage}>
+            {children}
+          </LanguageProvider>
+        </SessionProvider>
       </body>
     </html>
   );
