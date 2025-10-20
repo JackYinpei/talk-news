@@ -157,6 +157,8 @@ const agent = new RealtimeAgent({
 export default function Home() {
     const { data: userSession } = useSession()
     const { learningLanguage, nativeLanguage } = useLanguage()
+    console.log("nativeLanguage, learningLanguage ",nativeLanguage, learningLanguage);
+    
     useEffect(() => {
         console.log("user session info", userSession)
     }, [userSession])
