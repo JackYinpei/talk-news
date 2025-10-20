@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import { useLanguage } from '@/app/contexts/LanguageContext';
 
 import { TextMessage } from './TextMessage';
 import { FunctionCallMessage } from './FunctionCallMessage';
@@ -16,6 +17,39 @@ export function History({
     mcpTools = [],
     sendTextMessage,
 }) {
+    const { nativeLanguage } = useLanguage();
+    const langCode = (nativeLanguage?.code || 'en').toLowerCase().startsWith('zh')
+        ? 'zh'
+        : (nativeLanguage?.code || 'en').toLowerCase().startsWith('ja')
+            ? 'ja'
+            : 'en';
+
+    const t = {
+        en: {
+            connect: 'Connect',
+            disconnect: 'Disconnect',
+            mute: 'Mute',
+            unmute: 'Unmute',
+            placeholder: 'Type your message...',
+            send: 'Send',
+        },
+        zh: {
+            connect: '连接',
+            disconnect: '断开',
+            mute: '静音',
+            unmute: '取消静音',
+            placeholder: '输入你的消息...',
+            send: '发送',
+        },
+        ja: {
+            connect: '接続',
+            disconnect: '切断',
+            mute: 'ミュート',
+            unmute: 'ミュート解除',
+            placeholder: 'メッセージを入力...',
+            send: '送信',
+        },
+    }[langCode];
     // Avoid hydration mismatches when layout changes between server and client
     const [mounted, setMounted] = useState(false);
     const containerRef = useRef(null);
@@ -89,10 +123,10 @@ export function History({
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-blue-500 hover:bg-blue-600 text-white'
                         }`}
-                    title={isConnected ? "Disconnect" : "Connect"}
+                    title={isConnected ? t.disconnect : t.connect}
                 >
                     <span className="lg:hidden">{isConnected ? "🌐" : "📶"}</span>
-                    <span className="hidden lg:inline">{isConnected ? "Disconnect" : "Connect"}</span>
+                    <span className="hidden lg:inline">{isConnected ? t.disconnect : t.connect}</span>
                 </button>
                 
                 <button
@@ -101,10 +135,10 @@ export function History({
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-gray-500 hover:bg-gray-600 text-white'
                         }`}
-                    title={isMuted ? "Unmute" : "Mute"}
+                    title={isMuted ? t.unmute : t.mute}
                 >
                     <span className="lg:hidden">{isMuted ? "🔇" : "🎤"}</span>
-                    <span className="hidden lg:inline">{isMuted ? "Unmute" : "Mute"}</span>
+                    <span className="hidden lg:inline">{isMuted ? t.unmute : t.mute}</span>
                 </button>
 
                 <input
@@ -119,7 +153,7 @@ export function History({
                     }}
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
-                    placeholder="Type your message..."
+                    placeholder={t.placeholder}
                     className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
 
@@ -134,7 +168,7 @@ export function History({
                     disabled={!inputMessage.trim()}
                     className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex-shrink-0"
                 >
-                    Send
+                    {t.send}
                 </button>
             </div>
         </div>
