@@ -99,7 +99,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     } finally {
       setLoading(false);
     }
-  }, [translateArticleTitles]);
+  }, []);
 
   useEffect(() => {
     if (selectedCategory) {

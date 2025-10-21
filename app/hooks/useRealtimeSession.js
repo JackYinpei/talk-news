@@ -85,7 +85,7 @@ export function useRealtimeSession(callbacks = {}) {
   // Wrapper to pass current codec param
   const applyCodec = useCallback(
     (pc) => applyCodecPreferences(pc, codecParamRef.current),
-    [applyCodecPreferences],
+    [],
   );
 
   /**
@@ -120,7 +120,7 @@ export function useRealtimeSession(callbacks = {}) {
       // additional transport events
       sessionRef.current.on("transport_event", handleTransportEvent);
     }
-  }, [sessionRef.current, handleAgentHandoff, handleTransportEvent, historyHandlers.handleAgentToolEnd, historyHandlers.handleAgentToolStart, historyHandlers.handleGuardrailTripped, historyHandlers.handleHistoryAdded, historyHandlers.handleHistoryUpdated, logServerEvent]);
+  }, [handleAgentHandoff, handleTransportEvent, historyHandlers.handleAgentToolEnd, historyHandlers.handleAgentToolStart, historyHandlers.handleGuardrailTripped, historyHandlers.handleHistoryAdded, historyHandlers.handleHistoryUpdated, logServerEvent]);
 
   /**
    * Connect to realtime session
@@ -183,10 +183,10 @@ export function useRealtimeSession(callbacks = {}) {
    * Assert that session is connected
    * @throws {Error} If session is not connected
    */
-  const assertconnected = () => {
+  const assertconnected = useCallback(() => {
     if (!sessionRef.current) throw new Error('RealtimeSession not connected');
     if (status !== 'CONNECTED') throw new Error('WebRTC data channel is not connected. Make sure you call `connect()` before sending events.');
-  };
+  }, [status]);
 
   /* ----------------------- message helpers ------------------------- */
 

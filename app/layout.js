@@ -58,8 +58,8 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
-  const h = headers()
+export default async function RootLayout({ children }) {
+  const h = await headers()
   const acceptLanguage = h.get('accept-language') || ''
   return (
     <html lang="en">
