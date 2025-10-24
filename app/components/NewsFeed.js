@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { NewsCard } from "./NewsCard";
 
 // 新闻分类数据，保留一些主要的英文分类
@@ -17,6 +17,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(categories[0].categoryId);
+  const cardRefs = useRef({});
 
   const translateArticleTitles = useCallback((newArticles) => {
     newArticles.forEach((article) => {
@@ -107,20 +108,41 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     }
   }, [selectedCategory, fetchNews]);
 
+  const mobileHasSelection = Boolean(isMobile && selectedNews);
+  const lastSelectedIdRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    if (selectedNews) {
+      lastSelectedIdRef.current = selectedNews.id;
+    }
+
+    const targetId = selectedNews ? selectedNews.id : lastSelectedIdRef.current;
+    const target = targetId ? cardRefs.current[targetId] : null;
+    if (target?.scrollIntoView) {
+      target.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [isMobile, selectedNews]);
+
   const CategorySelector = () => {
-    const hasSelectedNews = isMobile && selectedNews;
+    const hasSelectedNews = mobileHasSelection;
 
     return (
       <div
         className={`transition-all duration-500 ease-in-out ${isMobile ? "px-2 sticky top-0 bg-background z-10" : "px-2"} ${
           hasSelectedNews
-            ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden'
-            : 'max-h-20 opacity-100 pointer-events-auto mb-4'
+            ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden -translate-y-2 mb-0'
+            : 'max-h-24 opacity-100 pointer-events-auto mb-4 translate-y-0'
         }`}
       >
-        <div className="relative flex items-center min-h-0">
+        <div className={`relative flex items-center min-h-0 transition-all duration-500 ease-in-out ${hasSelectedNews ? "scale-95" : "scale-100"}`}>
           <div
-            className="flex overflow-x-auto gap-2 py-2"
+            className={`flex overflow-x-auto gap-2 py-2 transition-opacity duration-300 ease-in-out ${hasSelectedNews ? "opacity-0" : "opacity-100"}`}
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: '#cbd5e1 #f1f5f9',
@@ -128,6 +150,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
               overscrollBehaviorX: 'contain',
               overscrollBehaviorY: 'none'
             }}
+            aria-hidden={hasSelectedNews}
           >
             {categories.map((category) => (
               <button
@@ -213,16 +236,25 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
             key={article.id}
             className={
               isMobile
-                ? `flex-shrink-0 transition-all duration-300 ${isSelected ? "w-full min-w-full max-w-full h-auto" : "w-[260px] h-48"}`
-                : `transition-all duration-300 ${isSelected ? "h-96" : "h-48"}`
+                ? mobileHasSelection
+                  ? `flex-shrink-0 transition-all duration-300 ease-in-out w-full min-w-full max-w-full h-auto ${isSelected ? "scale-100 opacity-100" : "scale-95 opacity-80"}`
+                  : "flex-shrink-0 transition-all duration-300 ease-in-out w-[260px] h-48"
+                : `transition-all duration-300 ease-in-out ${isSelected ? "h-96" : "h-48"}`
             }
+            ref={(el) => {
+              if (el) {
+                cardRefs.current[article.id] = el;
+              } else {
+                delete cardRefs.current[article.id];
+              }
+            }}
           >
             <NewsCard
               news={newsData}
               isSelected={isSelected}
               onSelect={() => onArticleSelect && onArticleSelect(isSelected ? null : newsData)}
               compact={isMobile}
-              expandedContent={isSelected && isMobile}
+              mobileHasSelection={mobileHasSelection}
             />
           </div>
         );
