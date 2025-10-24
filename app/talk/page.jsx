@@ -576,7 +576,7 @@ export default function Home() {
                     </div>
 
                     {/* Desktop News Cards - 在大屏幕以上显示 */}
-                    <div className="hidden lg:flex lg:w-[30%] flex-col min-h-0 h-[calc(100vh-140px)]">
+                    <div className="hidden lg:flex lg:w-[40%] flex-col min-h-0 h-[calc(100vh-140px)]">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
                         <div
                             className="min-h-0 h-full overflow-y-auto overscroll-contain"
