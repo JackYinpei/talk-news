@@ -18,6 +18,8 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(categories[0].categoryId);
   const cardRefs = useRef({});
+  const listContainerRef = useRef(null);
+  const previousScrollLeftRef = useRef(null);
 
   const translateArticleTitles = useCallback((newArticles) => {
     newArticles.forEach((article) => {
@@ -109,23 +111,44 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   }, [selectedCategory, fetchNews]);
 
   const mobileHasSelection = Boolean(isMobile && selectedNews);
-  const lastSelectedIdRef = useRef(null);
 
   useEffect(() => {
     if (!isMobile) return;
 
+    const container = listContainerRef.current;
+    if (!container) return;
+
     if (selectedNews) {
-      lastSelectedIdRef.current = selectedNews.id;
+      if (previousScrollLeftRef.current === null) {
+        previousScrollLeftRef.current = container.scrollLeft;
+      }
+
+      const target = cardRefs.current[selectedNews.id];
+      if (!target) return;
+
+      const containerStyle = window.getComputedStyle(container);
+      const paddingLeft = parseFloat(containerStyle.paddingLeft || "0");
+      const containerWidth = container.clientWidth;
+      const cardWidth = target.offsetWidth;
+      const targetLeft = target.offsetLeft;
+      const targetTop = target.offsetTop;
+
+      console.log(
+        `[NewsFeed] Selected card "${selectedNews.id}" position -> left: ${targetLeft}, top: ${targetTop}, width: ${cardWidth}`
+      );
+
+      let nextScrollLeft = targetLeft - paddingLeft - (containerWidth - cardWidth) / 2;
+      const maxScroll = container.scrollWidth - containerWidth;
+      nextScrollLeft = Math.max(0, Math.min(nextScrollLeft, maxScroll));
+
+      container.scrollTo({ left: nextScrollLeft, behavior: "smooth" });
+      return;
     }
 
-    const targetId = selectedNews ? selectedNews.id : lastSelectedIdRef.current;
-    const target = targetId ? cardRefs.current[targetId] : null;
-    if (target?.scrollIntoView) {
-      target.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
+    if (previousScrollLeftRef.current !== null) {
+      const restorePosition = previousScrollLeftRef.current;
+      previousScrollLeftRef.current = null;
+      container.scrollTo({ left: restorePosition, behavior: "smooth" });
     }
   }, [isMobile, selectedNews]);
 
@@ -208,6 +231,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
     <div>
       <CategorySelector />
       <div 
+        ref={isMobile ? listContainerRef : null}
         className={isMobile ? "flex gap-3 overflow-x-auto px-2" : "space-y-4 px-2 py-2"}
         style={isMobile ? {
           touchAction: 'pan-x pinch-zoom',
