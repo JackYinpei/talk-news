@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, MessageCircle, Clock, ArrowLeft, User, Bot } from 'lucide-react';
+import Link from 'next/link'
+import Navbar from '@/app/components/Navbar'
 
 export default function HistoryPage() {
     const [conversations, setConversations] = useState({});
@@ -184,6 +186,7 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-background">
+            <Navbar />
             {/* Header */}
             <header className="border-b border-border bg-card">
                 <div className="container mx-auto px-4 py-4">
@@ -203,6 +206,10 @@ export default function HistoryPage() {
                                 {viewMode === 'detail' ? '查看对话详情' : '查看和管理您的所有对话记录'}
                             </p>
                         </div>
+                        <div className="flex-1" />
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/history/words">生词本</Link>
+                        </Button>
                     </div>
                 </div>
             </header>

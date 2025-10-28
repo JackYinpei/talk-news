@@ -5,7 +5,7 @@ const CustomLink = ({ href, children, ...props }) => (
   <a
     href={href}
     {...props}
-    className="bg-gray-200 rounded-full py-1 px-2 text-sm font-medium hover:text-white hover:bg-black"
+    className="rounded-full py-1 px-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/80"
   >
     {children}
   </a>
@@ -21,9 +21,9 @@ export function TextMessage({ text, isUser }) {
       <div
         className={clsx('rounded-[16px] whitespace-pre-wrap', {
           // User bubble (right)
-          'px-4 py-2 max-w-[90%] ml-4 text-stone-900 bg-[#ededed]': isUser,
-          // Assistant bubble (left) with visible bubble styling
-          'px-4 py-2 max-w-[90%] mr-4 text-black bg-[#f8fafc] border border-gray-200': !isUser,
+          'px-4 py-2 max-w-[90%] ml-4 bg-secondary text-secondary-foreground': isUser,
+          // Assistant bubble (left)
+          'px-4 py-2 max-w-[90%] mr-4 bg-muted text-foreground border border-border': !isUser,
         })}
       >
         {text}

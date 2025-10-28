@@ -35,44 +35,44 @@ export function FunctionCallMessage({ message }) {
       <button
         type="button"
         onClick={toggleExpanded}
-        className="flex items-center justify-between rounded-xl bg-white p-3 text-left shadow-sm transition hover:shadow-md"
+        className="flex items-center justify-between rounded-xl bg-card text-card-foreground border border-border p-3 text-left shadow-sm transition hover:bg-accent hover:text-accent-foreground"
       >
-        <div className="flex items-center gap-2 text-blue-500 fill-blue-500">
+        <div className="flex items-center gap-2 text-primary fill-primary">
           {message.type === 'mcp_call' || message.type === 'mcp_tool_call' ? (
             <McpIcon width={16} height={16} />
           ) : (
             <FunctionsIcon width={16} height={16} />
           )}
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium">
               {message.status === 'completed'
                 ? `Called ${message.name}`
                 : `Calling ${message.name}...`}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {itemTexts.length > 0
                 ? itemTexts.join('、')
                 : 'No extracted items'}
             </span>
           </div>
         </div>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted-foreground">
           {isExpanded ? '▲' : '▼'}
         </span>
       </button>
 
       {isExpanded ? (
-        <div className="ml-6 mt-2 space-y-3 rounded-xl bg-[#fafafa] p-4 text-sm">
+        <div className="ml-6 mt-2 space-y-3 rounded-xl bg-muted p-4 text-sm text-foreground">
           {context ? (
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Context
               </div>
-              <p className="mt-1 text-gray-700">{context}</p>
+              <p className="mt-1">{context}</p>
             </div>
           ) : null}
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Items
             </div>
             {items.length > 0 ? (
@@ -80,13 +80,13 @@ export function FunctionCallMessage({ message }) {
                 {items.map((item, index) => (
                   <li
                     key={`${item?.text ?? 'item'}-${index}`}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2"
+                    className="rounded-lg border border-border bg-card text-card-foreground px-3 py-2"
                   >
-                    <div className="text-sm font-medium text-gray-800">
+                    <div className="text-sm font-medium">
                       {item?.text}
                     </div>
                     {item?.type ? (
-                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         {item.type}
                       </div>
                     ) : null}
@@ -94,7 +94,7 @@ export function FunctionCallMessage({ message }) {
                 ))}
               </ul>
             ) : (
-              <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <ClockIcon width={16} height={16} /> Waiting for items...
               </div>
             )}
@@ -103,7 +103,7 @@ export function FunctionCallMessage({ message }) {
       ) : null}
 
       {message.status !== 'completed' && !isExpanded ? (
-        <div className="ml-6 mt-2 flex items-center gap-2 text-xs text-gray-500">
+        <div className="ml-6 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
           <ClockIcon width={16} height={16} /> Waiting for result...
         </div>
       ) : null}

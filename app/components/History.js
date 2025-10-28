@@ -71,9 +71,9 @@ export function History({
         return () => cancelAnimationFrame(id);
     }, [history, mounted]);
     return (
-        <div className="flex flex-col h-full min-h-0">
+        <div className="flex flex-col h-full min-h-0 text-foreground">
             <div
-                className="overflow-y-auto px-4 flex-1 rounded-lg bg-white space-y-4 min-h-0 border pt-3 pb-8 sm:pb-10 md:pb-12"
+                className="overflow-y-auto px-4 flex-1 rounded-lg bg-card text-card-foreground space-y-4 min-h-0 border border-border pt-3 pb-8 sm:pb-10 md:pb-12"
                 id="chatHistory"
                 ref={containerRef}
             >
@@ -120,8 +120,8 @@ export function History({
                 <button
                     onClick={() => connect()}
                     className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isConnected
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                            ? 'bg-destructive text-white hover:bg-destructive/90'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
                         }`}
                     title={isConnected ? t.disconnect : t.connect}
                 >
@@ -132,8 +132,8 @@ export function History({
                 <button
                     onClick={toggleMute}
                     className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isMuted
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : 'bg-gray-500 hover:bg-gray-600 text-white'
+                            ? 'bg-destructive text-white hover:bg-destructive/90'
+                            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                         }`}
                     title={isMuted ? t.unmute : t.mute}
                 >
@@ -154,7 +154,7 @@ export function History({
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
                     placeholder={t.placeholder}
-                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className="flex-1 min-w-0 px-4 py-2 rounded-lg bg-background text-foreground border border-input outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                 />
 
 
@@ -166,7 +166,7 @@ export function History({
                         }
                     }}
                     disabled={!inputMessage.trim()}
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex-shrink-0"
+                    className="px-4 py-2 rounded-lg font-medium transition-colors flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {t.send}
                 </button>

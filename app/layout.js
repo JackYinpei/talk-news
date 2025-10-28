@@ -2,6 +2,7 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react"
 import { headers } from 'next/headers'
 import { LanguageProvider } from '@/app/contexts/LanguageContext'
+import { ThemeProvider } from '@/app/contexts/ThemeContext'
 
 export const metadata = {
   title: "TalkNews - Chat with AI to Learn English | AI English Tutor",
@@ -61,12 +62,16 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const h = await headers()
   const acceptLanguage = h.get('accept-language') || ''
+  const themeScript = `(()=>{try{var s=localStorage.getItem('theme');var m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=s==='light'?'light':s==='dark'?'dark':(m?'dark':'light');var d=document.documentElement;d.classList.toggle('dark',t==='dark');}catch(e){document.documentElement.classList.add('dark');}})()`
   return (
     <html lang="en">
       <body>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <SessionProvider>
           <LanguageProvider initialAcceptLanguage={acceptLanguage}>
-            {children}
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
           </LanguageProvider>
         </SessionProvider>
       </body>
