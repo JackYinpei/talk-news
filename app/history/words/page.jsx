@@ -15,6 +15,8 @@ function formatDate(iso) {
   }
 }
 
+// Client no longer constructs public URLs; it requests a signed URL from API
+
 export default function WordHistoryPage() {
   const { data: session, status } = useSession()
   const [loading, setLoading] = useState(false)
@@ -23,6 +25,7 @@ export default function WordHistoryPage() {
   const [hasMore, setHasMore] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all') // all | word | phrase | grammar | other
+  const [iconState, setIconState] = useState({}) // { [word]: { loading, url, error } }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -72,6 +75,97 @@ export default function WordHistoryPage() {
       fetchPage()
     }
   }, [status])
+
+  // Preload existing icons (no generation). For visible filtered words only.
+  useEffect(() => {
+    const words = new Set()
+    filtered.forEach((row) => {
+      (row.filteredItems || []).forEach((it) => {
+        if ((it?.type || 'other') === 'word') {
+          const w = String(it?.text || '').trim()
+          if (w) words.add(w)
+        }
+      })
+    })
+    const missing = Array.from(words).filter((w) => !iconState[w])
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      // Mark all missing as loading upfront
+      setIconState((s) => {
+        const next = { ...s }
+        for (const w of missing) {
+          next[w] = { ...(s[w] || {}), loading: true, error: null }
+        }
+        return next
+      })
+
+      try {
+        const res = await fetch('/api/icons/sign-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ words: missing }),
+        })
+        const text = await res.text()
+        let json
+        try { json = text ? JSON.parse(text) : {} } catch { json = { raw: text } }
+        if (cancelled) return
+        const results = json?.results || {}
+        setIconState((s) => {
+          const next = { ...s }
+          for (const w of missing) {
+            const r = results[w]
+            if (r?.exists && r?.url) {
+              next[w] = { loading: false, url: r.url, error: null }
+            } else {
+              next[w] = { loading: false, url: null, error: null }
+            }
+          }
+          return next
+        })
+      } catch {
+        if (cancelled) return
+        setIconState((s) => {
+          const next = { ...s }
+          for (const w of missing) {
+            next[w] = { loading: false, url: null, error: null }
+          }
+          return next
+        })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [filtered])
+
+  async function generateIcon(word) {
+    const key = String(word || '').trim()
+    if (!key) return
+    setIconState((s) => ({
+      ...s,
+      [key]: { ...(s[key] || {}), loading: true, error: null },
+    }))
+    try {
+      const res = await fetch('/api/icons/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: key }),
+      })
+      const text = await res.text()
+      let json
+      try { json = text ? JSON.parse(text) : {} } catch { json = { raw: text } }
+      if (!res.ok) throw new Error(json?.error || '生成失败')
+      const url = json?.url
+      setIconState((s) => ({
+        ...s,
+        [key]: { loading: false, url, error: null },
+      }))
+    } catch (e) {
+      setIconState((s) => ({
+        ...s,
+        [key]: { loading: false, url: null, error: e?.message || String(e) },
+      }))
+    }
+  }
 
   if (status === 'loading') {
     return (
@@ -159,15 +253,48 @@ export default function WordHistoryPage() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {row.filteredItems.map((it, idx) => (
-                    <div
-                      key={idx}
-                      className="px-2 py-1 rounded-full bg-accent text-accent-foreground border border-border text-xs"
-                    >
-                      <span className="font-medium">{it?.text}</span>
-                      <span className="ml-2 opacity-70">{it?.type || 'other'}</span>
-                    </div>
-                  ))}
+                  {row.filteredItems.map((it, idx) => {
+                    const word = String(it?.text || '')
+                    const state = iconState[word] || { loading: false, url: null, error: null }
+                    const isWord = (it?.type || 'other') === 'word'
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-stretch h-16 rounded-full bg-accent text-accent-foreground border border-border text-sm overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2 px-3">
+                          <span className="font-medium">{word}</span>
+                          <span className="opacity-70 text-xs">{it?.type || 'other'}</span>
+                        </div>
+                        {isWord && (
+                          <>
+                            {state.url ? (
+                              <div className="w-24 shrink-0 overflow-hidden">
+                                <img
+                                  src={state.url}
+                                  alt={word}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                className="ml-2 mr-2 my-2 px-3 rounded bg-primary text-primary-foreground disabled:opacity-50"
+                                onClick={() => generateIcon(word)}
+                                disabled={state.loading}
+                                title="生成图"
+                              >
+                                {state.loading ? '生成中...' : '生成图'}
+                              </button>
+                            )}
+                            {state.error && (
+                              <span className="self-center pr-2 text-destructive/80 text-xs">{state.error}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
