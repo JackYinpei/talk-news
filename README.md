@@ -68,3 +68,6 @@ curl -X POST https://api.openai.com/v1/realtime/client_secrets \
      }
    }'
 ```
+## sitemap
+use this to generate sitemap
+`npm run sitemap`
