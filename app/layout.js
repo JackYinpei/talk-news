@@ -5,12 +5,12 @@ import { LanguageProvider } from '@/app/contexts/LanguageContext'
 import { ThemeProvider } from '@/app/contexts/ThemeContext'
 
 export const metadata = {
-  title: "TalkNews - Chat with AI to Learn English | AI English Tutor",
+  title: "LingDaily - Chat with AI to Learn English | AI English Tutor",
   description: "Master English through AI-powered conversations about current news. Practice speaking, improve vocabulary, and gain confidence with our intelligent English learning platform. Chat with AI to learn English naturally and effectively.",
   keywords: ["chat with ai to learn english", "ai english tutor", "english learning", "ai conversation", "speak english practice", "english vocabulary", "news english", "ai language learning", "english conversation practice", "learn english online"],
-  authors: [{ name: "TalkNews" }],
-  creator: "TalkNews",
-  publisher: "TalkNews",
+  authors: [{ name: "LingDaily" }],
+  creator: "LingDaily",
+  publisher: "LingDaily",
   formatDetection: {
     email: false,
     address: false,
@@ -21,16 +21,16 @@ export const metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: "TalkNews - Chat with AI to Learn English",
+    title: "LingDaily - Chat with AI to Learn English",
     description: "Master English through AI-powered conversations about current news. Practice speaking, improve vocabulary, and gain confidence naturally.",
     url: 'https://talknews.ai',
-    siteName: 'TalkNews',
+    siteName: 'LingDaily',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'TalkNews - Chat with AI to Learn English',
+        alt: 'LingDaily - Chat with AI to Learn English',
       },
     ],
     locale: 'en_US',
@@ -38,10 +38,10 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "TalkNews - Chat with AI to Learn English",
+    title: "LingDaily - Chat with AI to Learn English",
     description: "Master English through AI-powered conversations about current news. Practice speaking and improve vocabulary naturally.",
     images: ['/og-image.jpg'],
-    creator: '@talknews',
+    creator: '@LingDaily',
   },
   robots: {
     index: true,

@@ -51,7 +51,7 @@ export default function SignInClient({ googleEnabled }) {
         <div className="max-w-md space-y-6 text-center md:text-left">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/80">
             <MessageCircle className="size-3.5" />
-            <span>TalkNews</span>
+            <span>LingDaily</span>
           </div>
           <h1 className="text-4xl font-semibold md:text-5xl">
             Sign in to continue your AI conversation practice

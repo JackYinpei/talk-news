@@ -27,7 +27,7 @@ export async function GET(req) {
       cache: 'no-store',
       // Some servers behave better with a UA
       headers: {
-        'User-Agent': 'TalkNews/1.0 (+https://talknews.ai)'
+        'User-Agent': 'LingDaily/1.0 (+https://talknews.ai)'
       }
     });
 
@@ -53,4 +53,3 @@ export async function GET(req) {
     );
   }
 }
-

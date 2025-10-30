@@ -14,9 +14,9 @@ const I18N = {
   en: {
     nav: { features: 'Features', how: 'How it Works', reviews: 'Reviews', startLearning: 'Start Learning', signIn: 'Sign In', signOut: 'Sign Out', talk: 'Talk', history: 'History' },
     hero: { badge: 'AI-Powered English Learning', h1Prefix: 'Chat with AI to', h1Highlight: 'Learn English', desc: 'Master English through real-time conversations about current news. Practice speaking, improve vocabulary, and gain confidence with our AI English tutor.', primaryBtn: 'Start Free Conversation', secondaryBtn: 'Watch Demo' },
-    features: { title: 'Why Choose TalkNews?', subtitle: 'Learn English naturally through AI conversations about real-world topics', card1Title: 'Real-Time Conversations', card1Desc: 'Practice speaking English with AI that understands context and provides instant feedback on your pronunciation and grammar.', card2Title: 'Current News Topics', card2Desc: 'Stay informed while learning. Discuss trending news stories to build vocabulary and cultural understanding.', card3Title: 'Personalized Learning', card3Desc: 'AI adapts to your learning level and interests, providing customized conversations that match your progress.' },
+    features: { title: 'Why Choose LingDaily?', subtitle: 'Learn English naturally through AI conversations about real-world topics', card1Title: 'Real-Time Conversations', card1Desc: 'Practice speaking English with AI that understands context and provides instant feedback on your pronunciation and grammar.', card2Title: 'Current News Topics', card2Desc: 'Stay informed while learning. Discuss trending news stories to build vocabulary and cultural understanding.', card3Title: 'Personalized Learning', card3Desc: 'AI adapts to your learning level and interests, providing customized conversations that match your progress.' },
     how: { title: 'How It Works', subtitle: 'Three simple steps to start improving your English today', step1Title: 'Choose a News Topic', step1Desc: 'Select from current news stories that interest you, from technology to global events.', step2Title: 'Start Talking', step2Desc: 'Engage in natural conversation with our AI tutor about the topic you chose.', step3Title: 'Learn & Improve', step3Desc: 'Receive real-time feedback, learn new vocabulary, and track your progress.' },
-    benefits: { title: 'Perfect for English Learners', bullets: ['Practice speaking without judgment','Learn vocabulary in context','Improve pronunciation with AI feedback','Stay updated with global news','Learn at your own pace, 24/7'], rating: '4.9/5 from 1000+ learners', quote: '“TalkNews helped me improve my English speaking skills faster than any other method. The AI conversations feel natural and the news topics keep me engaged.”', cite: '— Sarah K., International Student' },
+    benefits: { title: 'Perfect for English Learners', bullets: ['Practice speaking without judgment','Learn vocabulary in context','Improve pronunciation with AI feedback','Stay updated with global news','Learn at your own pace, 24/7'], rating: '4.9/5 from 1000+ learners', quote: '“LingDaily helped me improve my English speaking skills faster than any other method. The AI conversations feel natural and the news topics keep me engaged.”', cite: '— Sarah K., International Student' },
     cta: { title: 'Ready to Master English?', subtitle: 'Join thousands of learners who are improving their English through AI-powered conversations', primaryBtn: 'Start Your Free Conversation', note: 'No credit card required • Start learning immediately' },
     footer: { features: 'Features', learning: 'Learning', support: 'Support', aiConversations: 'AI Conversations', newsTopics: 'News Topics', progressTracking: 'Progress Tracking', startLearning: 'Start Learning', conversationHistory: 'Conversation History', tipsGuides: 'Tips & Guides', helpCenter: 'Help Center', contactUs: 'Contact Us', privacy: 'Privacy Policy', rights: 'All rights reserved. Chat with AI to learn English.' },
     start: { learningLabel: 'Learning', nativeLabel: 'Native' },
@@ -24,9 +24,9 @@ const I18N = {
   zh: {
     nav: { features: '功能', how: '使用方式', reviews: '评价', startLearning: '开始学习', signIn: '登录', signOut: '退出登录', talk: '对话', history: '历史' },
     hero: { badge: 'AI 驱动的英语学习', h1Prefix: '和 AI 对话来', h1Highlight: '学习英语', desc: '通过与 AI 围绕实时新闻进行对话学习英语。练习口语、提升词汇量，并获得自信。', primaryBtn: '开始免费对话', secondaryBtn: '观看演示' },
-    features: { title: '为什么选择 TalkNews？', subtitle: '通过与 AI 讨论真实话题，自然地学习英语', card1Title: '实时对话', card1Desc: '与能理解上下文的 AI 进行口语练习，获得关于发音和语法的即时反馈。', card2Title: '时事新闻主题', card2Desc: '在学习的同时保持信息更新。讨论热门新闻，构建词汇与文化理解。', card3Title: '个性化学习', card3Desc: 'AI 会根据你的水平和兴趣定制对话，匹配你的学习进度。' },
+    features: { title: '为什么选择 LingDaily？', subtitle: '通过与 AI 讨论真实话题，自然地学习英语', card1Title: '实时对话', card1Desc: '与能理解上下文的 AI 进行口语练习，获得关于发音和语法的即时反馈。', card2Title: '时事新闻主题', card2Desc: '在学习的同时保持信息更新。讨论热门新闻，构建词汇与文化理解。', card3Title: '个性化学习', card3Desc: 'AI 会根据你的水平和兴趣定制对话，匹配你的学习进度。' },
     how: { title: '如何使用', subtitle: '三步开始高效提升英语', step1Title: '选择新闻话题', step1Desc: '在科技、全球事件等当前新闻中选择你感兴趣的话题。', step2Title: '开始对话', step2Desc: '围绕你选择的话题，与我们的 AI 导师自然交流。', step3Title: '学习与提升', step3Desc: '获得实时反馈，学习新词汇，并跟踪你的进步。' },
-    benefits: { title: '英语学习者的理想选择', bullets: ['无压力的口语练习','在语境中学习词汇','AI 帮助改进发音','持续了解全球资讯','随时随地按节奏学习'], rating: '来自 1000+ 学员的 4.9/5 评分', quote: '“TalkNews 让我口语提升更快。与 AI 的对话很自然，新闻话题也让我保持兴趣。”', cite: '— Sarah K., 国际学生' },
+    benefits: { title: '英语学习者的理想选择', bullets: ['无压力的口语练习','在语境中学习词汇','AI 帮助改进发音','持续了解全球资讯','随时随地按节奏学习'], rating: '来自 1000+ 学员的 4.9/5 评分', quote: '“LingDaily 让我口语提升更快。与 AI 的对话很自然，新闻话题也让我保持兴趣。”', cite: '— Sarah K., 国际学生' },
     cta: { title: '准备好掌握英语了吗？', subtitle: '加入数千学员，通过 AI 对话不断提升英语', primaryBtn: '开始你的免费对话', note: '无需信用卡 • 立即开始学习' },
     footer: { features: '功能', learning: '学习', support: '支持', aiConversations: 'AI 对话', newsTopics: '新闻话题', progressTracking: '进度追踪', startLearning: '开始学习', conversationHistory: '对话历史', tipsGuides: '技巧与指南', helpCenter: '帮助中心', contactUs: '联系我们', privacy: '隐私政策', rights: '版权所有。和 AI 对话学习英语。' },
     start: { learningLabel: '学习语言', nativeLabel: '母语' },
@@ -34,9 +34,9 @@ const I18N = {
   ja: {
     nav: { features: '機能', how: '使い方', reviews: 'レビュー', startLearning: '学習を始める', signIn: 'サインイン', signOut: 'サインアウト', talk: '会話', history: '履歴' },
     hero: { badge: 'AI で英語学習', h1Prefix: 'AIと会話して', h1Highlight: '英語を学ぶ', desc: 'ニュースに関するリアルタイム会話で英語を習得。スピーキング練習、語彙力アップ、自信を獲得しよう。', primaryBtn: '無料で会話を開始', secondaryBtn: 'デモを見る' },
-    features: { title: 'TalkNews を選ぶ理由', subtitle: '実世界のトピックについて AI と会話し、自然に英語を学ぶ', card1Title: 'リアルタイム会話', card1Desc: '文脈を理解する AI と英会話練習。発音や文法の即時フィードバック。', card2Title: '最新ニュースの話題', card2Desc: '学びながら情報収集。トレンドのニュースで語彙と文化理解を養う。', card3Title: 'パーソナライズ学習', card3Desc: 'レベルや興味に合わせて会話を最適化。あなたの進度にマッチ。' },
+    features: { title: 'LingDaily を選ぶ理由', subtitle: '実世界のトピックについて AI と会話し、自然に英語を学ぶ', card1Title: 'リアルタイム会話', card1Desc: '文脈を理解する AI と英会話練習。発音や文法の即時フィードバック。', card2Title: '最新ニュースの話題', card2Desc: '学びながら情報収集。トレンドのニュースで語彙と文化理解を養う。', card3Title: 'パーソナライズ学習', card3Desc: 'レベルや興味に合わせて会話を最適化。あなたの進度にマッチ。' },
     how: { title: '使い方', subtitle: '3 ステップで英語力を向上', step1Title: 'ニューストピックを選ぶ', step1Desc: 'テクノロジーから国際情勢まで、気になるニュースを選択。', step2Title: '会話を始める', step2Desc: '選んだトピックについて AI チューターと自然に会話。', step3Title: '学び、上達する', step3Desc: 'リアルタイムのフィードバックを受け、語彙を学び、進捗を追跡。' },
-    benefits: { title: '英語学習者に最適', bullets: ['気軽にスピーキング練習','文脈で語彙を学ぶ','AI で発音を改善','世界のニュースを把握','いつでも自分のペースで'], rating: '1000人以上から4.9/5の評価', quote: '「TalkNews で英会話力が大幅に向上しました。AI との会話は自然で、ニュース話題で飽きません。」', cite: '— Sarah K.（留学生）' },
+    benefits: { title: '英語学習者に最適', bullets: ['気軽にスピーキング練習','文脈で語彙を学ぶ','AI で発音を改善','世界のニュースを把握','いつでも自分のペースで'], rating: '1000人以上から4.9/5の評価', quote: '「LingDaily で英会話力が大幅に向上しました。AI との会話は自然で、ニュース話題で飽きません。」', cite: '— Sarah K.（留学生）' },
     cta: { title: '英語をマスターする準備はできた？', subtitle: '何千人もの学習者が AI 会話で英語力を向上', primaryBtn: '無料で会話を開始', note: 'クレジットカード不要 • 今すぐ始められます' },
     footer: { features: '機能', learning: '学習', support: 'サポート', aiConversations: 'AI 会話', newsTopics: 'ニューストピック', progressTracking: '進捗トラッキング', startLearning: '学習を始める', conversationHistory: '会話履歴', tipsGuides: 'ヒントとガイド', helpCenter: 'ヘルプセンター', contactUs: 'お問い合わせ', privacy: 'プライバシーポリシー', rights: '無断転載禁止。AI と会話して英語を学ぶ。' },
     start: { learningLabel: '学習言語', nativeLabel: '母語' },
@@ -78,7 +78,7 @@ export default function HomePageClient({ signedIn, signOutAction }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <MessageCircle className="h-8 w-8" />
-              <span className="text-2xl font-bold text-foreground">TalkNews</span>
+              <span className="text-2xl font-bold text-foreground">LingDaily</span>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
               {signedIn ? (
@@ -308,7 +308,7 @@ export default function HomePageClient({ signedIn, signOutAction }) {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <MessageCircle className="h-6 w-6" />
-                <span className="text-xl font-bold">TalkNews</span>
+                <span className="text-xl font-bold">LingDaily</span>
               </div>
               <p className="text-muted-foreground">AI-powered English learning through news conversations</p>
             </div>
@@ -338,7 +338,7 @@ export default function HomePageClient({ signedIn, signOutAction }) {
             </div>
           </div>
           <div className="border-t border-border mt-12 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 TalkNews. {t.footer.rights}</p>
+            <p>&copy; 2024 LingDaily. {t.footer.rights}</p>
           </div>
         </div>
       </footer>

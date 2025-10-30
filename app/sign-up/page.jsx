@@ -56,7 +56,7 @@ export default function SignUp() {
             <UserPlus className="size-3.5" />
             <span>Create Account</span>
           </div>
-          <h1 className="text-4xl font-semibold md:text-5xl">Join TalkNews</h1>
+          <h1 className="text-4xl font-semibold md:text-5xl">Join LingDaily</h1>
           <p className="text-base text-white/70 md:text-lg">
             Register with your email and start practicing English with AI.
           </p>
@@ -129,4 +129,3 @@ export default function SignUp() {
     </div>
   )
 }
-

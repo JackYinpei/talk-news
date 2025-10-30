@@ -1,4 +1,4 @@
-# TalkNews
+# LingDaily
 
 AI 驱动的英语新闻会话练习应用，基于 Next.js App Router 与 NextAuth 构建。用户可以通过邮箱或（在配置后）Google 账号登录，和 OpenAI Realtime 能力驱动的对话助手持续练习口语并追踪词汇。
 

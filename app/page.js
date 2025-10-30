@@ -12,7 +12,7 @@ export default async function Home() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "TalkNews",
+    "name": "LingDaily",
     "description": "Chat with AI to learn English through current news conversations. AI-powered English learning platform for vocabulary building and speaking practice.",
     "url": "https://talknews.ai",
     "applicationCategory": "EducationalApplication",
@@ -31,4 +31,3 @@ export default async function Home() {
     </>
   );
 }
-
