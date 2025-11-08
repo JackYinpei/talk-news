@@ -20,7 +20,7 @@ export async function GET(req) {
       );
     }
 
-    const targetUrl = `https://kite.kagi.com/${category}.xml`;
+    const targetUrl = `https://news.kagi.com/${category}.xml`;
     const upstream = await fetch(targetUrl, {
       // Follow redirects and avoid caching in Next to keep it fresh
       redirect: 'follow',

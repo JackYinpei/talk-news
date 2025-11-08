@@ -120,3 +120,32 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .custom-scroll:hover {
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+  }
+
+  .custom-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+  }
+
+  .custom-scroll:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.6);
+  }
+}

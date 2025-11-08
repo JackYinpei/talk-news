@@ -2,6 +2,30 @@
 
 AI 驱动的英语新闻会话练习应用，基于 Next.js App Router 与 NextAuth 构建。用户可以通过邮箱或（在配置后）Google 账号登录，和 OpenAI Realtime 能力驱动的对话助手持续练习口语并追踪词汇。
 
+
+## 效果
+
+
+### 主页
+
+![homepage](public/dark-home.png)
+
+### 聊天
+
+![聊天界面](public/talk.png)
+
+### 历史
+
+![历史](public/history.png)
+
+### 历史详情
+
+![历史详情](public/history-detail.png)
+
+### 生单词
+
+![生单词](public/words.png)
+
 ## 快速开始
 
 1. 安装依赖

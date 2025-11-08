@@ -159,16 +159,14 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
       <div
         className={`transition-all duration-500 ease-in-out ${isMobile ? "px-2 sticky top-0 bg-background z-10" : "px-2"} ${
           hasSelectedNews
-            ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden -translate-y-2 mb-0'
+            ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden -translate-y-2 mb-0 custom-scroll'
             : 'max-h-24 opacity-100 pointer-events-auto mb-4 translate-y-0'
         }`}
       >
         <div className={`relative flex items-center min-h-0 transition-all duration-500 ease-in-out ${hasSelectedNews ? "scale-95" : "scale-100"}`}>
           <div
-            className={`flex overflow-x-auto gap-2 py-2 transition-opacity duration-300 ease-in-out ${hasSelectedNews ? "opacity-0" : "opacity-100"}`}
+            className={`flex overflow-x-auto custom-scroll gap-2 py-2 transition-opacity duration-300 ease-in-out ${hasSelectedNews ? "opacity-0" : "opacity-100"}`}
             style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#cbd5e1 #f1f5f9',
               touchAction: 'pan-x pinch-zoom',
               overscrollBehaviorX: 'contain',
               overscrollBehaviorY: 'none'
@@ -232,7 +230,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
       <CategorySelector />
       <div 
         ref={isMobile ? listContainerRef : null}
-        className={isMobile ? "flex gap-3 overflow-x-auto px-2" : "space-y-4 px-2 py-2"}
+        className={isMobile ? "flex gap-3 overflow-x-auto custom-scroll px-2" : "space-y-4 px-2 py-2"}
         style={isMobile ? {
           touchAction: 'pan-x pinch-zoom',
           scrollBehavior: 'smooth',

@@ -6,15 +6,11 @@ import { TextMessage } from './TextMessage';
 import { FunctionCallMessage } from './FunctionCallMessage';
 
 export function History({
-    title = 'Realtime Agent Demo',
     isConnected,
     isMuted,
     toggleMute,
     connect,
     history,
-    outputGuardrailResult,
-    events,
-    mcpTools = [],
     sendTextMessage,
 }) {
     const { nativeLanguage } = useLanguage();
@@ -70,14 +66,16 @@ export function History({
         });
         return () => cancelAnimationFrame(id);
     }, [history, mounted]);
+    const visibleHistory = history.filter((item) => item.role !== 'system');
+
     return (
         <div className="flex flex-col h-full min-h-0 text-foreground">
             <div
-                className="overflow-y-auto px-4 flex-1 rounded-lg bg-card text-card-foreground space-y-4 min-h-0 border border-border pt-3 pb-8 sm:pb-10 md:pb-12"
+                className="overflow-y-auto custom-scroll px-4 flex-1 rounded-lg bg-card text-card-foreground space-y-4 min-h-0 border border-border pt-3 pb-8 sm:pb-10 md:pb-12"
                 id="chatHistory"
                 ref={containerRef}
             >
-                {history.map((item) => {
+                {visibleHistory.map((item) => {
 
                     if (item.type === 'function_call') {
                         return <FunctionCallMessage message={item} key={item.itemId} />;

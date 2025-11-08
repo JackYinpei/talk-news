@@ -6,7 +6,7 @@ module.exports = {
   generateRobotsTxt: true,
   exclude: ['/api/*'],
   additionalPaths: async (config) => {
-    const routes = ['/', '/talk', '/history', '/sign-in', '/sign-up'];
+    const routes = ['/', '/talk', '/history', '/sign-in', '/sign-up', '/longtail'];
     return Promise.all(routes.map((route) => config.transform(config, route)));
   },
   robotsTxtOptions: {

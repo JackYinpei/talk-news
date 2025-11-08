@@ -145,3 +145,58 @@ export async function GET(req) {
     return jsonResponse({ error: error?.message || "Unexpected error" }, 500);
   }
 }
+
+export async function DELETE(req) {
+  try {
+    if (!tableUrl || !supabaseAnonKey) {
+      return jsonResponse({ error: "Missing Supabase env configuration" }, 500);
+    }
+
+    const session = await auth();
+    if (!session?.user?.id) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    const { searchParams } = new URL(req.url);
+    const newsKey = searchParams.get("newsKey");
+
+    if (!newsKey) {
+      return jsonResponse({ error: "'newsKey' is required" }, 400);
+    }
+
+    const query = new URLSearchParams();
+    query.set("user_id", `eq.${session.user.id}`);
+    query.set("news_key", `eq.${newsKey}`);
+
+    const bearer = supabaseServiceRoleKey || session.supabaseAccessToken || supabaseAnonKey;
+    const apiKeyHeader = supabaseServiceRoleKey || supabaseAnonKey;
+
+    const response = await fetch(`${tableUrl}?${query.toString()}`, {
+      method: "DELETE",
+      headers: {
+        apikey: apiKeyHeader,
+        Authorization: `Bearer ${bearer}`,
+        "Content-Profile": supabaseSchema,
+        Prefer: "return=representation",
+      },
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = { raw: text };
+    }
+
+    if (!response.ok) {
+      const message = data?.message || data?.hint || data?.error || data?.raw || "Failed to delete chat history";
+      return jsonResponse({ error: message, details: data }, response.status || 400);
+    }
+
+    return jsonResponse({ ok: true, data });
+  } catch (error) {
+    return jsonResponse({ error: error?.message || "Unexpected error" }, 500);
+  }
+}

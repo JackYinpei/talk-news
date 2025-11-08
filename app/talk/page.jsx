@@ -5,7 +5,7 @@ import {
     RealtimeSession,
     tool,
 } from '@openai/agents/realtime';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { WavRecorder, WavStreamPlayer } from 'wavtools';
 import { v4 as uuidv4 } from "uuid";
@@ -21,34 +21,7 @@ import { getToken } from "@/app/server/token.action";
 import { CombineInitPrompt } from '@/lib/utils';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 
-const refundBackchannel = tool({
-    name: 'refundBackchannel',
-    description: 'Evaluate a refund',
-    parameters: z.object({
-        request: z.string(),
-    }),
-    execute: async ({ request }) => {
-        console.log("request")
-        // return handleRefundRequest(request);
-    },
-});
-
-const guardrails = [
-    {
-        name: 'No mention of Dom',
-        execute: async ({ agentOutput }) => {
-            const domInOutput = agentOutput.includes('Dom');
-            return {
-                tripwireTriggered: domInOutput,
-                outputInfo: {
-                    domInOutput,
-                },
-            };
-        },
-    },
-];
-
-// Extract Unfamiliar English tool defined once and reused in agent instances
+// Tool: persist unfamiliar expressions for later review
 const extractUnfamiliarEnglishTool = tool({
     name: 'extractUnfamiliarEnglish',
     description: 'Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns ',
@@ -228,25 +201,108 @@ function createLanguageAgent(nativeLabel, targetLabel, uiLangCode) {
 }
 
 // 生成 chat_history 中使用的 news_key：优先使用 RSS 原始链接保证唯一性，其次才是标题/临时 ID
+// --- Conversation helpers ---------------------------------------------------
+
+const sanitizeKeyString = (value) => String(value || 'default').replace(/\s+/g, '');
+
 const getNewsKey = (news) => {
     if (!news) return 'default';
-    const rawKey = news.link || news.originalTitle || news.title || news.id || 'default';
-    return String(rawKey).trim();
+    const base = news.originalTitle || news.title || news.link || news.id || 'default';
+    return sanitizeKeyString(base);
+};
+
+const createNewsContextMessage = (news) => {
+    if (!news) return null;
+    const contextText = CombineInitPrompt(news);
+    if (!contextText) return null;
+    const newsKey = getNewsKey(news);
+    return {
+        type: 'message',
+        role: 'system',
+        itemId: `news-context-${newsKey}`,
+        content: [{
+            type: 'output_text',
+            text: contextText,
+        }],
+        metadata: {
+            kind: 'news_context',
+            newsKey,
+            title: news.title || news.originalTitle || null,
+        },
+        createdAt: new Date().toISOString(),
+    };
+};
+
+const ensureContextMessage = (historyItems, contextMessage) => {
+    const list = Array.isArray(historyItems) ? historyItems : [];
+    if (!contextMessage) return list;
+    const hasContext = list.some((item) => item?.itemId === contextMessage.itemId);
+    if (hasContext) {
+        return list.map((item) => item?.itemId === contextMessage.itemId ? contextMessage : item);
+    }
+    return [contextMessage, ...list];
+};
+
+const extractMessageText = (message) => {
+    if (!message?.content) return '';
+    for (const content of message.content) {
+        if (
+            content.type === 'input_text' ||
+            content.type === 'output_text' ||
+            content.type === 'text'
+        ) {
+            if (typeof content.text === 'string' && content.text.trim()) {
+                return content.text.trim();
+            }
+        }
+        if (
+            (content.type === 'input_audio' || content.type === 'output_audio') &&
+            typeof content.transcript === 'string' &&
+            content.transcript.trim()
+        ) {
+            return content.transcript.trim();
+        }
+    }
+    return '';
+};
+
+// Remove manual placeholders when model returns the same text later
+const dedupeManualMessages = (historyItems) => {
+    const list = Array.isArray(historyItems) ? historyItems : [];
+    const nonManualTexts = new Set();
+
+    list.forEach((item) => {
+        if (item?.role === 'user' && !item?.metadata?.manualInput) {
+            const text = extractMessageText(item);
+            if (text) nonManualTexts.add(text);
+        }
+    });
+
+    return list.filter((item) => {
+        if (item?.role === 'user' && item?.metadata?.manualInput) {
+            const text = extractMessageText(item);
+            if (text && nonManualTexts.has(text)) {
+                return false;
+            }
+        }
+        return true;
+    });
 };
 
 export default function Home() {
     const { data: userSession } = useSession()
     const { learningLanguage, nativeLanguage } = useLanguage()
-    const uiLangCode = (nativeLanguage?.code || 'en').toLowerCase().startsWith('zh')
-        ? 'zh'
-        : (nativeLanguage?.code || 'en').toLowerCase().startsWith('ja')
-            ? 'ja'
-            : 'en';
-    const uiText = {
+    const uiLangCode = useMemo(() => {
+        const code = (nativeLanguage?.code || 'en').toLowerCase();
+        if (code.startsWith('zh')) return 'zh';
+        if (code.startsWith('ja')) return 'ja';
+        return 'en';
+    }, [nativeLanguage?.code]);
+    const uiText = useMemo(() => ({
         en: { history: 'History', historyShort: 'History' },
         zh: { history: '对话历史', historyShort: '历史' },
         ja: { history: '履歴', historyShort: '履歴' },
-    }[uiLangCode]
+    }[uiLangCode]), [uiLangCode]);
     
     const session = useRef(null);
     const player = useRef(null);
@@ -254,22 +310,21 @@ export default function Home() {
     
     const [isConnected, setIsConnected] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
-    const [outputGuardrailResult, setOutputGuardrailResult] = useState(null);
-    const [events, setEvents] = useState([]);
     const [history, setHistory] = useState([]);
-    const [mcpTools, setMcpTools] = useState([]);
     // Image capture handled by CameraCapture component.
 
     const [selectedNews, setSelectedNews] = useState(null)
     const selectedNewsRef = useRef(null)
+    const newsContextMessageRef = useRef(null)
     const persistTimeoutRef = useRef(null)
 
     // 将某条新闻下的完整对话历史节流保存到后端
     const persistConversation = useCallback(async (news, conversationHistory) => {
-        if (!news || !Array.isArray(conversationHistory) || !userSession?.user?.id) return;
+        if (!news || !Array.isArray(conversationHistory) || conversationHistory.length === 0) return;
+        if (!userSession?.user?.id) return;
         const payload = {
             newsKey: getNewsKey(news),
-            newsTitle: news.title || news.originalTitle || news.id || 'Untitled',
+            newsTitle: news.originalTitle || news.title || news.id || 'Untitled',
             newsContent: news,
             history: conversationHistory,
             summary: null,
@@ -292,7 +347,8 @@ export default function Home() {
 
     // 在对话频繁更新时延迟触发保存，避免每条消息都打接口
     const scheduleConversationPersist = useCallback((news, conversationHistory) => {
-        if (!news || !Array.isArray(conversationHistory) || !userSession?.user?.id) return;
+        if (!news || !Array.isArray(conversationHistory) || conversationHistory.length === 0) return;
+        if (!userSession?.user?.id) return;
         if (persistTimeoutRef.current) {
             clearTimeout(persistTimeoutRef.current);
         }
@@ -342,15 +398,18 @@ export default function Home() {
     useEffect(() => {
         if (!selectedNews) {
             selectedNewsRef.current = null;
+            newsContextMessageRef.current = null;
             setHistory([]);
             return;
         }
 
         selectedNewsRef.current = selectedNews;
         saveSelectedNewsToStorage(selectedNews);
+        const contextMessage = createNewsContextMessage(selectedNews);
+        newsContextMessageRef.current = contextMessage;
 
         if (!userSession?.user?.id) {
-            setHistory([]);
+            setHistory(ensureContextMessage([], contextMessage));
             return;
         }
 
@@ -368,20 +427,29 @@ export default function Home() {
                 const json = await res.json().catch(() => ({}));
                 const rows = Array.isArray(json?.data) ? json.data : [];
                 if (rows.length > 0 && Array.isArray(rows[0]?.history)) {
-                    setHistory(rows[0].history);
+                    const nextHistory = ensureContextMessage(rows[0].history, contextMessage);
+                    setHistory(nextHistory);
+                    if (!rows[0].history.some((item) => item?.itemId === contextMessage?.itemId) && contextMessage) {
+                        scheduleConversationPersist(selectedNews, nextHistory);
+                    }
                 } else {
-                    setHistory([]);
+                    const seededHistory = ensureContextMessage([], contextMessage);
+                    setHistory(seededHistory);
+                    if (seededHistory.length > 0) {
+                        scheduleConversationPersist(selectedNews, seededHistory);
+                    }
                 }
             } catch (error) {
                 if (error.name === 'AbortError') return;
                 console.error('Failed to load conversation from server:', error);
-                setHistory([]);
+                const fallbackHistory = ensureContextMessage([], contextMessage);
+                setHistory(fallbackHistory);
             }
         };
 
         loadConversation();
         return () => controller.abort();
-    }, [selectedNews, userSession?.user?.id]);
+    }, [selectedNews, userSession?.user?.id, scheduleConversationPersist]);
 
     // 每次成功连接并选择新闻后，向 Agent 注入当前新闻的初始提示
     useEffect(() => {
@@ -399,12 +467,11 @@ export default function Home() {
             session.current = null;
         }
 
-        const uiLangCode = (nativeLanguage?.code || 'en').toLowerCase().startsWith('zh')
-            ? 'zh'
-            : (nativeLanguage?.code || 'en').toLowerCase().startsWith('ja')
-                ? 'ja'
-                : 'en';
-        const agent = createLanguageAgent(nativeLanguage?.label || '中文', learningLanguage?.label || 'English', uiLangCode);
+        const agent = createLanguageAgent(
+            nativeLanguage?.label || '中文',
+            learningLanguage?.label || 'English',
+            uiLangCode,
+        );
 
         session.current = new RealtimeSession(agent, {
             transport: 'websocket',
@@ -422,10 +489,6 @@ export default function Home() {
 
         session.current.on('audio', (event) => {
             player.current?.add16BitPCM(event.data, event.responseId);
-        });
-
-        session.current.on('transport_event', (event) => {
-            setEvents((events) => [...events, event]);
         });
 
         session.current.on('audio_interrupted', () => {
@@ -450,13 +513,22 @@ export default function Home() {
                     }
                 });
 
-                // 更新新历史，保留已有的transcript
-                const updatedHistory = newHistory.map(item => {
-                    if (item.type === 'message' && item.role === 'assistant' && existingTranscripts.has(item.itemId)) {
-                        return {
-                            ...item,
-                            content: item.content.map(content => {
-                                if (content.type === 'output_audio' && !content.transcript) {
+                const historyIndexMap = new Map();
+                const mergedHistory = [...prevHistory];
+                prevHistory.forEach((item, index) => {
+                    historyIndexMap.set(item.itemId, { item, index });
+                });
+
+                const contextMessage = newsContextMessageRef.current;
+                const contextText = extractMessageText(contextMessage);
+
+                const mergedFromAgent = newHistory
+                    .map(item => {
+                        if (item.type === 'message' && item.role === 'assistant' && existingTranscripts.has(item.itemId)) {
+                            return {
+                                ...item,
+                                content: item.content.map(content => {
+                                    if (content.type === 'output_audio' && !content.transcript) {
                                     return {
                                         ...content,
                                         transcript: existingTranscripts.get(item.itemId)
@@ -467,21 +539,37 @@ export default function Home() {
                         };
                     }
                     return item;
+                })
+                    .filter((item) => {
+                        if (!contextText) return true;
+                        if (item.type === 'message' && item.role === 'user') {
+                            const text = extractMessageText(item);
+                            if (text && text === contextText) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+
+                mergedFromAgent.forEach((item) => {
+                    const existing = historyIndexMap.get(item.itemId);
+                    if (existing) {
+                        mergedHistory[existing.index] = item;
+                    } else {
+                        historyIndexMap.set(item.itemId, { item, index: mergedHistory.length });
+                        mergedHistory.push(item);
+                    }
                 });
 
-                // 过滤掉满足条件的item
-                const filteredHistory = updatedHistory.filter(item => {
-                    return !(item.type === 'message' &&
-                            item.role === 'user' &&
-                            item.content[0]?.type === 'input_text');
-                });
+                const finalHistory = ensureContextMessage(mergedHistory, contextMessage);
+                const dedupedHistory = dedupeManualMessages(finalHistory);
 
                 const currentSelectedNews = selectedNewsRef.current;
                 if (currentSelectedNews) {
-                    scheduleConversationPersist(currentSelectedNews, filteredHistory);
+                    scheduleConversationPersist(currentSelectedNews, dedupedHistory);
                 }
 
-                return filteredHistory;
+                return dedupedHistory;
             });
         });
 
@@ -489,43 +577,10 @@ export default function Home() {
             console.error('error', error);
         });
 
-        session.current.on(
-            'guardrail_tripped',
-            (_context, _agent, guardrailError) => {
-                setOutputGuardrailResult(guardrailError);
-            },
-        );
-        session.current.on('mcp_tools_changed', (tools) => {
-            setMcpTools(tools.map((t) => t.name));
-        });
-
-        session.current.on(
-            'tool_approval_requested',
-            (_context, _agent, approvalRequest) => {
-                // You'll be prompted when making the tool call that requires approval in web browser.
-                const approved = confirm(
-                    `Approve tool call to ${approvalRequest.approvalItem.rawItem.name} with parameters:\n ${JSON.stringify(approvalRequest.approvalItem.rawItem.arguments, null, 2)}?`,
-                );
-                if (approved) {
-                    session.current?.approve(approvalRequest.approvalItem);
-                } else {
-                    session.current?.reject(approvalRequest.approvalItem);
-                }
-            },
-        );
-
-        session.current.on(
-            'mcp_tool_call_completed',
-            (_context, _agent, toolCall) => {
-                session.current?.transport?.sendEvent({
-                    type: 'response.create',
-                });
-            },
-        );
         return () => {
             try { session.current?.close(); } catch {}
         }
-    }, [nativeLanguage?.code, nativeLanguage?.label, learningLanguage?.code, learningLanguage?.label, scheduleConversationPersist]);
+    }, [nativeLanguage?.code, nativeLanguage?.label, learningLanguage?.code, learningLanguage?.label, uiLangCode, scheduleConversationPersist]);
 
     async function record() {
         await recorder.current?.record(async (data) => {
@@ -568,6 +623,7 @@ export default function Home() {
 
         session.current.sendMessage(input)
         const id = uuidv4().slice(0, 32);
+        const createdAt = new Date().toISOString();
         const msgItem = {
             type: "message",
             role: "user",
@@ -576,6 +632,11 @@ export default function Home() {
                 text: input,
             }],
             itemId: id,
+            metadata: {
+                manualInput: true,
+                createdAt,
+            },
+            created_at: createdAt,
         };
 
         // 追加到 history
@@ -619,7 +680,7 @@ export default function Home() {
                                 {uiText.historyShort}
                             </a>
                         </div>
-                        <div className="overflow-x-auto pb-2 -mx-4 px-4">
+                        <div className="overflow-x-auto custom-scroll pb-2 -mx-4 px-4">
                             <NewsFeed
                                 onArticleSelect={setSelectedNews}
                                 selectedNews={selectedNews}
@@ -634,7 +695,7 @@ export default function Home() {
                     <div className="hidden lg:flex lg:w-[40%] flex-col min-h-0 h-[calc(100vh-140px)]">
                         <h2 className="text-xl font-semibold text-foreground mb-4">Latest News</h2>
                         <div
-                            className="min-h-0 h-full overflow-y-auto overscroll-contain"
+                            className="min-h-0 h-full overflow-y-auto custom-scroll overscroll-contain"
                             style={{ overscrollBehaviorY: 'contain' }}
                         >
                             <NewsFeed
@@ -649,15 +710,11 @@ export default function Home() {
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
                     <div className="flex-1 lg:w-[70%] flex flex-col min-h-0 lg:h-[calc(100vh-140px)]">
                         <History
-                            title="Realtime Demo via WebSocket"
                             isConnected={isConnected}
                             isMuted={isMuted}
                             toggleMute={toggleMute}
                             connect={connect}
                             history={history}
-                            outputGuardrailResult={outputGuardrailResult}
-                            events={events}
-                            mcpTools={mcpTools}
                             sendTextMessage={sendTextMessage}
                         />
                     </div>

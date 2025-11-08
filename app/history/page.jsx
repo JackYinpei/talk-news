@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,37 +10,87 @@ import Navbar from '@/app/components/Navbar'
 
 export default function HistoryPage() {
     const [conversations, setConversations] = useState({});
-    const [selectedConversation, setSelectedConversation] = useState(null);
+    const [selectedConversationKey, setSelectedConversationKey] = useState(null);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [deletingKey, setDeletingKey] = useState(null);
     const router = useRouter();
+    const selectedConversation = selectedConversationKey ? conversations[selectedConversationKey] : null;
+
+    const loadConversations = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/chat-history?limit=100', { cache: 'no-store' });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err?.error || `Failed to load conversations (${res.status})`);
+            }
+            const json = await res.json().catch(() => ({}));
+            const rows = Array.isArray(json?.data) ? json.data : [];
+            const mapped = rows.reduce((acc, row) => {
+                const newsKey = row?.news_key || row?.newsKey;
+                if (!newsKey) return acc;
+                const selectedNews = row?.news || row?.newsContent || null;
+                acc[newsKey] = {
+                    id: row?.id,
+                    newsKey,
+                    selectedNews: selectedNews || (row?.news_title ? { title: row.news_title } : null),
+                    newsTitle: row?.news_title || row?.newsTitle || null,
+                    history: Array.isArray(row?.history) ? row.history : [],
+                    lastUpdated: row?.updated_at || row?.created_at || new Date().toISOString(),
+                    summary: row?.summary ?? null,
+                };
+                return acc;
+            }, {});
+            setConversations(mapped);
+        } catch (err) {
+            console.error('Failed to fetch conversations:', err);
+            setError(err?.message || '无法加载对话记录');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         loadConversations();
-    }, []);
+    }, [loadConversations]);
 
-    const loadConversations = () => {
+    const deleteConversation = async (newsKey) => {
+        if (!newsKey) return;
+        setDeletingKey(newsKey);
+        setError(null);
         try {
-            const stored = localStorage.getItem('chatConversations');
-            if (stored) {
-                setConversations(JSON.parse(stored));
+            const res = await fetch(`/api/chat-history?newsKey=${encodeURIComponent(newsKey)}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err?.error || `Failed to delete conversation (${res.status})`);
+            }
+            setConversations(prev => {
+                const next = { ...prev };
+                delete next[newsKey];
+                return next;
+            });
+            if (selectedConversationKey === newsKey) {
+                setSelectedConversationKey(null);
+                setViewMode('list');
             }
         } catch (error) {
-            console.error('Failed to load conversations:', error);
-        }
-    };
-
-    const deleteConversation = (newsKey) => {
-        try {
-            const updatedConversations = { ...conversations };
-            delete updatedConversations[newsKey];
-            localStorage.setItem('chatConversations', JSON.stringify(updatedConversations));
-            setConversations(updatedConversations);
-        } catch (error) {
             console.error('Failed to delete conversation:', error);
+            setError(error?.message || '删除对话失败');
+        } finally {
+            setDeletingKey(null);
         }
     };
 
     const navigateToConversation = (newsKey, selectedNews) => {
+        if (!selectedNews) {
+            console.error('Missing selected news payload, cannot resume conversation.');
+            return;
+        }
         // 设置选中的新闻到 localStorage
         try {
             localStorage.setItem('selectedNews', JSON.stringify(selectedNews));
@@ -50,18 +100,20 @@ export default function HistoryPage() {
         }
     };
 
-    const viewConversationDetail = (newsKey, conversation) => {
-        setSelectedConversation({ newsKey, ...conversation });
+    const viewConversationDetail = (newsKey) => {
+        setSelectedConversationKey(newsKey);
         setViewMode('detail');
     };
 
     const backToList = () => {
-        setSelectedConversation(null);
+        setSelectedConversationKey(null);
         setViewMode('list');
     };
 
     const formatDate = (dateString) => {
+        if (!dateString) return '--';
         const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return '--';
         return date.toLocaleDateString('zh-CN', {
             year: 'numeric',
             month: 'short',
@@ -111,12 +163,22 @@ export default function HistoryPage() {
     };
 
     const renderConversationDetail = () => {
-        if (!selectedConversation || !selectedConversation.history) return null;
+        if (!selectedConversation || !selectedConversation.history) {
+            return (
+                <div className="max-w-2xl mx-auto text-center py-12 text-muted-foreground">
+                    未找到对话记录
+                </div>
+            );
+        }
 
         const messages = selectedConversation.history.filter(item =>
             item.type === 'message' &&
             (item.role === 'user' || item.role === 'assistant')
         );
+        const conversationTitle = selectedConversation.selectedNews?.title
+            || selectedConversation.newsTitle
+            || selectedConversation.newsKey;
+        const summaryText = selectedConversation.selectedNews?.summary || selectedConversation.summary;
 
         return (
             <div className="max-w-4xl mx-auto">
@@ -132,13 +194,19 @@ export default function HistoryPage() {
                     </Button>
                     <div className="flex-1">
                         <h2 className="text-xl font-semibold text-foreground">
-                            {selectedConversation.selectedNews?.title || selectedConversation.newsKey}
+                            {conversationTitle}
                         </h2>
                         <p className="text-sm text-muted-foreground">
                             {formatDate(selectedConversation.lastUpdated)} • {messages.length} 条消息
                         </p>
+                        {summaryText && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {summaryText}
+                            </p>
+                        )}
                     </div>
                     <Button
+                        disabled={!selectedConversation.selectedNews}
                         onClick={() => navigateToConversation(selectedConversation.newsKey, selectedConversation.selectedNews)}
                         className="flex items-center gap-2"
                     >
@@ -184,6 +252,140 @@ export default function HistoryPage() {
         );
     };
 
+    const renderConversationList = () => {
+        const entries = Object.entries(conversations);
+        if (isLoading) {
+            return (
+                <div className="text-center py-12 text-muted-foreground">
+                    正在加载对话记录...
+                </div>
+            );
+        }
+
+        if (entries.length === 0 && error) {
+            return (
+                <div className="text-center py-12 space-y-4">
+                    <p className="text-sm text-destructive">{error}</p>
+                    <Button onClick={loadConversations} variant="outline">
+                        重试
+                    </Button>
+                </div>
+            );
+        }
+
+        if (entries.length === 0) {
+            return (
+                <div className="text-center py-12">
+                    <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">还没有对话记录</h3>
+                    <p className="text-muted-foreground mb-4">开始和 AI 对话来创建您的第一个对话记录</p>
+                    <Button onClick={() => router.push('/talk')}>
+                        开始对话
+                    </Button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4">
+                {error && (
+                    <div className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive md:flex-row md:items-center md:justify-between">
+                        <span>{error}</span>
+                        <Button size="sm" variant="outline" onClick={loadConversations}>
+                            重试
+                        </Button>
+                    </div>
+                )}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {entries
+                    .sort(([, a], [, b]) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
+                    .map(([newsKey, conversation]) => {
+                        const summaryText = conversation.selectedNews?.summary || conversation.summary;
+                        const messageCount = getMessageCount(conversation.history);
+                        const lastMessage = getLastUserMessage(conversation.history);
+                        const disableResume = !conversation.selectedNews;
+                        const title = conversation.selectedNews?.title || conversation.newsTitle || newsKey;
+                        const lastUpdatedLabel = formatDate(conversation.lastUpdated);
+
+                        return (
+                            <Card key={newsKey} className="hover:shadow-md transition-shadow">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <CardTitle className="text-lg line-clamp-2 mb-2">
+                                                {title}
+                                            </CardTitle>
+                                            <CardDescription className="flex items-center gap-2 text-sm">
+                                                <Clock className="h-4 w-4" />
+                                                {lastUpdatedLabel}
+                                            </CardDescription>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            disabled={deletingKey === newsKey}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteConversation(newsKey);
+                                            }}
+                                            className={`text-muted-foreground hover:text-destructive ${deletingKey === newsKey ? 'opacity-50' : ''}`}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    <div className="space-y-3">
+                                        {summaryText && (
+                                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                                {summaryText}
+                                            </p>
+                                        )}
+
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <MessageCircle className="h-4 w-4" />
+                                                {messageCount} 条消息
+                                            </span>
+                                        </div>
+
+                                        {lastMessage && (
+                                            <div className="bg-muted/50 rounded-lg p-3">
+                                                <p className="text-sm font-medium text-foreground mb-1">最后消息:</p>
+                                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                                    {lastMessage}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2 pt-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => viewConversationDetail(newsKey)}
+                                                className="flex-1"
+                                            >
+                                                查看详情
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                disabled={disableResume}
+                                                onClick={() => navigateToConversation(newsKey, conversation.selectedNews)}
+                                                className="flex-1"
+                                            >
+                                                继续对话
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
@@ -216,94 +418,7 @@ export default function HistoryPage() {
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-6">
-                {viewMode === 'detail' ? (
-                    renderConversationDetail()
-                ) : Object.keys(conversations).length === 0 ? (
-                    <div className="text-center py-12">
-                        <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">还没有对话记录</h3>
-                        <p className="text-muted-foreground mb-4">开始和 AI 对话来创建您的第一个对话记录</p>
-                        <Button onClick={() => router.push('/talk')}>
-                            开始对话
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {Object.entries(conversations)
-                            .sort(([,a], [,b]) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
-                            .map(([newsKey, conversation]) => (
-                            <Card key={newsKey} className="hover:shadow-md transition-shadow cursor-pointer">
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg line-clamp-2 mb-2">
-                                                {conversation.selectedNews?.title || newsKey}
-                                            </CardTitle>
-                                            <CardDescription className="flex items-center gap-2 text-sm">
-                                                <Clock className="h-4 w-4" />
-                                                {formatDate(conversation.lastUpdated)}
-                                            </CardDescription>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteConversation(newsKey);
-                                            }}
-                                            className="text-muted-foreground hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="space-y-3">
-                                        {conversation.selectedNews?.summary && (
-                                            <p className="text-sm text-muted-foreground line-clamp-2">
-                                                {conversation.selectedNews.summary}
-                                            </p>
-                                        )}
-
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <MessageCircle className="h-4 w-4" />
-                                                {getMessageCount(conversation.history)} 条消息
-                                            </span>
-                                        </div>
-
-                                        {getLastUserMessage(conversation.history) && (
-                                            <div className="bg-muted/50 rounded-lg p-3">
-                                                <p className="text-sm font-medium text-foreground mb-1">最后消息:</p>
-                                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                                    {getLastUserMessage(conversation.history)}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2 pt-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => viewConversationDetail(newsKey, conversation)}
-                                                className="flex-1"
-                                            >
-                                                查看详情
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => navigateToConversation(newsKey, conversation.selectedNews)}
-                                                className="flex-1"
-                                            >
-                                                继续对话
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
+                {viewMode === 'detail' ? renderConversationDetail() : renderConversationList()}
             </div>
         </div>
     );

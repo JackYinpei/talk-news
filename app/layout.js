@@ -66,8 +66,8 @@ export default async function RootLayout({ children }) {
   const acceptLanguage = h.get('accept-language') || ''
   const themeScript = `(()=>{try{var s=localStorage.getItem('theme');var m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=s==='light'?'light':s==='dark'?'dark':(m?'dark':'light');var d=document.documentElement;d.classList.toggle('dark',t==='dark');}catch(e){document.documentElement.classList.add('dark');}})()`
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <SessionProvider>
           <LanguageProvider initialAcceptLanguage={acceptLanguage}>

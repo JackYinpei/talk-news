@@ -1,10 +1,21 @@
 import { auth, signOut } from "@/app/auth";
+import { AuthError } from "next-auth";
 import HomePageClient from '@/app/components/HomePageClient'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lingdaily.yasobi.xyz';
 
 export default async function Home() {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    if (error instanceof AuthError && error.type === "JWTSessionError") {
+      console.warn("auth() failed to decode session token, ignoring cookie", error);
+      session = null;
+    } else {
+      throw error;
+    }
+  }
 
   async function signOutAction() {
     'use server'
