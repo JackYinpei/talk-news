@@ -5,7 +5,7 @@ import {
     RealtimeSession,
     tool,
 } from '@openai/agents/realtime';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { WavRecorder, WavStreamPlayer } from 'wavtools';
 import { v4 as uuidv4 } from "uuid";
@@ -227,6 +227,13 @@ function createLanguageAgent(nativeLabel, targetLabel, uiLangCode) {
     });
 }
 
+// 生成 chat_history 中使用的 news_key：优先使用 RSS 原始链接保证唯一性，其次才是标题/临时 ID
+const getNewsKey = (news) => {
+    if (!news) return 'default';
+    const rawKey = news.link || news.originalTitle || news.title || news.id || 'default';
+    return String(rawKey).trim();
+};
+
 export default function Home() {
     const { data: userSession } = useSession()
     const { learningLanguage, nativeLanguage } = useLanguage()
@@ -255,31 +262,56 @@ export default function Home() {
 
     const [selectedNews, setSelectedNews] = useState(null)
     const selectedNewsRef = useRef(null)
+    const persistTimeoutRef = useRef(null)
 
-    // localStorage helpers
-    const saveConversationToStorage = (newsKey, conversation) => {
+    // 将某条新闻下的完整对话历史节流保存到后端
+    const persistConversation = useCallback(async (news, conversationHistory) => {
+        if (!news || !Array.isArray(conversationHistory) || !userSession?.user?.id) return;
+        const payload = {
+            newsKey: getNewsKey(news),
+            newsTitle: news.title || news.originalTitle || news.id || 'Untitled',
+            newsContent: news,
+            history: conversationHistory,
+            summary: null,
+        };
+
         try {
-            const conversations = JSON.parse(localStorage.getItem('chatConversations') || '{}');
-            conversations[newsKey] = {
-                ...conversation,
-                lastUpdated: new Date().toISOString()
-            };
-            localStorage.setItem('chatConversations', JSON.stringify(conversations));
+            const res = await fetch('/api/chat-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                console.error('Failed to persist chat history:', err);
+            }
         } catch (error) {
-            console.error('Failed to save conversation to localStorage:', error);
+            console.error('Error saving chat history:', error);
         }
-    };
+    }, [userSession?.user?.id]);
 
-    const loadConversationFromStorage = (newsKey) => {
-        try {
-            const conversations = JSON.parse(localStorage.getItem('chatConversations') || '{}');
-            return conversations[newsKey] || null;
-        } catch (error) {
-            console.error('Failed to load conversation from localStorage:', error);
-            return null;
+    // 在对话频繁更新时延迟触发保存，避免每条消息都打接口
+    const scheduleConversationPersist = useCallback((news, conversationHistory) => {
+        if (!news || !Array.isArray(conversationHistory) || !userSession?.user?.id) return;
+        if (persistTimeoutRef.current) {
+            clearTimeout(persistTimeoutRef.current);
         }
-    };
+        persistTimeoutRef.current = setTimeout(() => {
+            persistConversation(news, conversationHistory);
+        }, 800);
+    }, [persistConversation, userSession?.user?.id]);
 
+    useEffect(() => {
+        return () => {
+            if (persistTimeoutRef.current) {
+                clearTimeout(persistTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // localStorage helpers for selected news
+
+    // 仅把当前选中的新闻存到 localStorage，刷新后还能定位
     const saveSelectedNewsToStorage = (news) => {
         try {
             localStorage.setItem('selectedNews', JSON.stringify(news));
@@ -306,21 +338,52 @@ export default function Home() {
         }
     }, []);
 
-    // 当选择新闻时保存并加载对应的对话历史
+    // 当选择新闻时保存引用，并尝试从服务端读取对应的历史记录
     useEffect(() => {
-        if (selectedNews) {
-            selectedNewsRef.current = selectedNews; // 更新 ref
-            saveSelectedNewsToStorage(selectedNews);
-            const newsKey = selectedNews.title || selectedNews.id || 'default';
-            const savedConversation = loadConversationFromStorage(newsKey);
-            if (savedConversation && savedConversation.history) {
-                setHistory(savedConversation.history);
-            } else {
+        if (!selectedNews) {
+            selectedNewsRef.current = null;
+            setHistory([]);
+            return;
+        }
+
+        selectedNewsRef.current = selectedNews;
+        saveSelectedNewsToStorage(selectedNews);
+
+        if (!userSession?.user?.id) {
+            setHistory([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        const loadConversation = async () => {
+            try {
+                const newsKey = getNewsKey(selectedNews);
+                const res = await fetch(`/api/chat-history?newsKey=${encodeURIComponent(newsKey)}`, {
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+                if (!res.ok) {
+                    throw new Error(`Failed to load conversation: ${res.status}`);
+                }
+                const json = await res.json().catch(() => ({}));
+                const rows = Array.isArray(json?.data) ? json.data : [];
+                if (rows.length > 0 && Array.isArray(rows[0]?.history)) {
+                    setHistory(rows[0].history);
+                } else {
+                    setHistory([]);
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                console.error('Failed to load conversation from server:', error);
                 setHistory([]);
             }
-        }
-    }, [selectedNews]);
+        };
 
+        loadConversation();
+        return () => controller.abort();
+    }, [selectedNews, userSession?.user?.id]);
+
+    // 每次成功连接并选择新闻后，向 Agent 注入当前新闻的初始提示
     useEffect(() => {
         if (!session.current) return
         if (!selectedNews) return
@@ -328,6 +391,7 @@ export default function Home() {
         session.current.sendMessage(CombineInitPrompt(selectedNews))
     }, [selectedNews, isConnected])
 
+    // 初始化 Realtime Session，并注册所有事件监听
     useEffect(() => {
         // cleanup any existing session instance before creating a new one
         if (session.current) {
@@ -412,14 +476,9 @@ export default function Home() {
                             item.content[0]?.type === 'input_text');
                 });
 
-                // 保存到 localStorage
                 const currentSelectedNews = selectedNewsRef.current;
                 if (currentSelectedNews) {
-                    const newsKey = currentSelectedNews.title || currentSelectedNews.id || 'default';
-                    saveConversationToStorage(newsKey, {
-                        history: filteredHistory,
-                        selectedNews: currentSelectedNews
-                    });
+                    scheduleConversationPersist(currentSelectedNews, filteredHistory);
                 }
 
                 return filteredHistory;
@@ -466,7 +525,7 @@ export default function Home() {
         return () => {
             try { session.current?.close(); } catch {}
         }
-    }, [nativeLanguage?.code, nativeLanguage?.label, learningLanguage?.code, learningLanguage?.label]);
+    }, [nativeLanguage?.code, nativeLanguage?.label, learningLanguage?.code, learningLanguage?.label, scheduleConversationPersist]);
 
     async function record() {
         await recorder.current?.record(async (data) => {
@@ -503,6 +562,7 @@ export default function Home() {
         }
     }
 
+    // 文本输入消息发送，并将本地 history 与后端同步
     const sendTextMessage = function (input) {
         if (!session.current) return
 
@@ -522,14 +582,9 @@ export default function Home() {
         setHistory(prevHistory => {
             const newHistory = [...prevHistory, msgItem];
 
-            // 保存到 localStorage
             const currentSelectedNews = selectedNewsRef.current;
             if (currentSelectedNews) {
-                const newsKey = currentSelectedNews.title || currentSelectedNews.id || 'default';
-                saveConversationToStorage(newsKey, {
-                    history: newHistory,
-                    selectedNews: currentSelectedNews
-                });
+                scheduleConversationPersist(currentSelectedNews, newHistory);
             }
 
             return newHistory;

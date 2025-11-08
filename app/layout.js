@@ -4,6 +4,8 @@ import { headers } from 'next/headers'
 import { LanguageProvider } from '@/app/contexts/LanguageContext'
 import { ThemeProvider } from '@/app/contexts/ThemeContext'
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lingdaily.yasobi.xyz';
+
 export const metadata = {
   title: "LingDaily - Chat with AI to Learn English | AI English Tutor",
   description: "Master English through AI-powered conversations about current news. Practice speaking, improve vocabulary, and gain confidence with our intelligent English learning platform. Chat with AI to learn English naturally and effectively.",
@@ -16,14 +18,14 @@ export const metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://talknews.ai'),
+  metadataBase: new URL(siteUrl),
   alternates: {
-    canonical: '/',
+    canonical: siteUrl,
   },
   openGraph: {
     title: "LingDaily - Chat with AI to Learn English",
     description: "Master English through AI-powered conversations about current news. Practice speaking, improve vocabulary, and gain confidence naturally.",
-    url: 'https://talknews.ai',
+    url: siteUrl,
     siteName: 'LingDaily',
     images: [
       {

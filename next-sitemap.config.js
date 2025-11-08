@@ -1,4 +1,4 @@
-const siteUrl = process.env.SITE_URL || 'https://lingdaily.yasobi.xyz';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lingdaily.yasobi.xyz';
 
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {

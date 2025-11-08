@@ -1,6 +1,8 @@
 import { auth, signOut } from "@/app/auth";
 import HomePageClient from '@/app/components/HomePageClient'
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lingdaily.yasobi.xyz';
+
 export default async function Home() {
   const session = await auth();
 
@@ -14,14 +16,14 @@ export default async function Home() {
     "@type": "WebApplication",
     "name": "LingDaily",
     "description": "Chat with AI to learn English through current news conversations. AI-powered English learning platform for vocabulary building and speaking practice.",
-    "url": "https://talknews.ai",
+    "url": siteUrl,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "1000" },
     "keywords": "chat with ai to learn english, ai english tutor, english learning, ai conversation, speak english practice",
     "inLanguage": "en",
-    "potentialAction": { "@type": "UseAction", "target": "https://talknews.ai/talk" }
+    "potentialAction": { "@type": "UseAction", "target": `${siteUrl}/talk` }
   };
 
   return (
