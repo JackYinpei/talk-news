@@ -95,3 +95,7 @@ curl -X POST https://api.openai.com/v1/realtime/client_secrets \
 ## sitemap
 use this to generate sitemap
 `npm run sitemap`
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=JackYinpei/talk-news&type=date&legend=top-left)](https://www.star-history.com/#JackYinpei/talk-news&type=date&legend=top-left)
