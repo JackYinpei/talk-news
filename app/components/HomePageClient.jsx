@@ -1,14 +1,11 @@
-'use client'
-
-import React, { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MessageCircle, Users, Globe, Zap, CheckCircle, Star, X } from 'lucide-react'
+import { MessageCircle, Users, Globe, CheckCircle, Star } from 'lucide-react'
 import StartLearningWithLanguage from '@/app/components/StartLearningWithLanguage'
-import { useLanguage } from '@/app/contexts/LanguageContext'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import HeroVideoDemo from '@/app/components/HeroVideoDemo'
 
 const I18N = {
   en: {
@@ -43,32 +40,11 @@ const I18N = {
   },
 }
 
-function mapNativeToLocale(nativeCode) {
-  const lc = (nativeCode || '').toLowerCase()
-  if (lc.startsWith('zh')) return 'zh'
-  if (lc.startsWith('ja')) return 'ja'
-  return 'en'
-}
+const DEFAULT_LOCALE = 'en'
 
-export default function HomePageClient({ signedIn, signOutAction }) {
-  const { nativeLanguage } = useLanguage()
-  const locale = useMemo(() => mapNativeToLocale(nativeLanguage?.code), [nativeLanguage?.code])
-  const t = I18N[locale]
-  const [isVideoOpen, setIsVideoOpen] = useState(false)
-  const videoRef = useRef(null)
-
-  useEffect(() => {
-    if (isVideoOpen && videoRef.current) {
-      try {
-        // Reset and attempt autoplay (muted for mobile compatibility)
-        videoRef.current.currentTime = 0
-        const playPromise = videoRef.current.play()
-        if (playPromise && typeof playPromise.then === 'function') {
-          playPromise.catch(() => {})
-        }
-      } catch {}
-    }
-  }, [isVideoOpen])
+export default function HomePageClient({ signedIn, signOutAction, locale = DEFAULT_LOCALE }) {
+  const normalizedLocale = I18N[locale] ? locale : DEFAULT_LOCALE
+  const t = I18N[normalizedLocale]
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -137,51 +113,10 @@ export default function HomePageClient({ signedIn, signOutAction }) {
                 <MessageCircle className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              size="lg"
-              className="px-8 py-4 text-lg"
-              onClick={() => setIsVideoOpen(true)}
-            >
-              {t.hero.secondaryBtn}
-              <Zap className="ml-2 h-5 w-5" />
-            </Button>
+            <HeroVideoDemo buttonLabel={t.hero.secondaryBtn} />
           </div>
         </div>
       </section>
-
-      {isVideoOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4"
-          onClick={() => setIsVideoOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Demo Video"
-        >
-          <div
-            className="relative w-full max-w-4xl aspect-video bg-card rounded-lg overflow-hidden shadow-xl border border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="absolute top-3 right-3 z-10 bg-card text-foreground rounded-full p-2 shadow border border-border hover:bg-accent"
-              onClick={() => setIsVideoOpen(false)}
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <video
-              className="w-full h-full"
-              src="https://talknews-1308277566.cos.ap-shanghai.myqcloud.com/talknws-show.mp4"
-              controls
-              autoPlay
-              muted
-              playsInline
-              ref={videoRef}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Features Section */}
       <section id="features" className="container mx-auto px-4 py-20">
