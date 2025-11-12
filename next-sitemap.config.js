@@ -1,13 +1,69 @@
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lingdaily.yasobi.xyz';
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseSchema = process.env.SUPABASE_SCHEMA || 'public';
+
+async function fetchLongtailRoutes(limit = 10) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.warn('next-sitemap: missing Supabase credentials, skipping longtail entries');
+    return [];
+  }
+
+  const params = new URLSearchParams();
+  params.set('select', 'news_key,user_id,updated_at');
+  params.set('order', 'updated_at.desc');
+  params.set('limit', String(limit));
+
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/chat_history?${params.toString()}`, {
+      headers: {
+        apikey: supabaseServiceRoleKey,
+        Authorization: `Bearer ${supabaseServiceRoleKey}`,
+        'Content-Profile': supabaseSchema,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('next-sitemap: failed to load longtail entries', response.status);
+      return [];
+    }
+
+    const rows = await response.json();
+    return Array.isArray(rows)
+      ? rows
+          .filter((row) => row?.news_key && row?.user_id)
+          .map((row) => ({
+            route: `/longtail/${encodeURIComponent(row.news_key)}/${encodeURIComponent(row.user_id)}`,
+            lastmod: row?.updated_at || new Date().toISOString(),
+          }))
+      : [];
+  } catch (error) {
+    console.error('next-sitemap: unexpected error while fetching longtail entries', error);
+    return [];
+  }
+}
 
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
   siteUrl,
   generateRobotsTxt: true,
-  exclude: ['/api/*'],
+  exclude: ['/api/*', '/sign-in', '/sign-up', '/history', '/history/*'],
   additionalPaths: async (config) => {
-    const routes = ['/', '/talk', '/history', '/sign-in', '/sign-up', '/longtail'];
-    return Promise.all(routes.map((route) => config.transform(config, route)));
+    const staticRoutes = ['/', '/talk', '/longtail'];
+    const staticEntries = await Promise.all(
+      staticRoutes.map((route) => config.transform(config, route)),
+    );
+
+    const longtailEntries = await fetchLongtailRoutes();
+    const longtailTransforms = await Promise.all(
+      longtailEntries.map(async ({ route, lastmod }) => {
+        const base = await config.transform(config, route);
+        return { ...base, lastmod };
+      }),
+    );
+
+    return [...staticEntries, ...longtailTransforms];
   },
   robotsTxtOptions: {
     policies: [
