@@ -97,144 +97,146 @@ export default function HomePageClient({ signedIn, signOutAction, locale = DEFAU
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <Badge variant="secondary" className="mb-6">🚀 {t.hero.badge}</Badge>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            {t.hero.h1Prefix}
-            <span className="text-transparent bg-gradient-to-r from-white to-zinc-400 bg-clip-text"> {t.hero.h1Highlight}</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">{t.hero.desc}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <main id="content" className="flex flex-col gap-0">
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 py-20 text-center" aria-labelledby="hero-heading">
+          <div className="max-w-4xl mx-auto">
+            <Badge variant="secondary" className="mb-6">🚀 {t.hero.badge}</Badge>
+            <h1 id="hero-heading" className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+              {t.hero.h1Prefix}
+              <span className="text-transparent bg-gradient-to-r from-white to-zinc-400 bg-clip-text"> {t.hero.h1Highlight}</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">{t.hero.desc}</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/talk">
+                <Button size="lg" className="font-semibold px-8 py-4 text-lg">
+                  {t.hero.primaryBtn}
+                  <MessageCircle className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <HeroVideoDemo buttonLabel={t.hero.secondaryBtn} />
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="container mx-auto px-4 py-20" aria-labelledby="features-heading">
+          <div className="text-center mb-16">
+            <h2 id="features-heading" className="text-4xl md:text-5xl font-bold mb-4">{t.features.title}</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">{t.features.subtitle}</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="transition-colors">
+              <CardContent className="p-6">
+                <MessageCircle className="h-12 w-12 mb-4" aria-hidden />
+                <h3 className="text-2xl font-semibold mb-4">{t.features.card1Title}</h3>
+                <p className="text-muted-foreground">{t.features.card1Desc}</p>
+              </CardContent>
+            </Card>
+            <Card className="transition-colors">
+              <CardContent className="p-6">
+                <Globe className="h-12 w-12 mb-4" aria-hidden />
+                <h3 className="text-2xl font-semibold mb-4">{t.features.card2Title}</h3>
+                <p className="text-muted-foreground">{t.features.card2Desc}</p>
+              </CardContent>
+            </Card>
+            <Card className="transition-colors">
+              <CardContent className="p-6">
+                <Users className="h-12 w-12 mb-4" aria-hidden />
+                <h3 className="text-2xl font-semibold mb-4">{t.features.card3Title}</h3>
+                <p className="text-muted-foreground">{t.features.card3Desc}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* How it Works */}
+        <section id="how-it-works" className="bg-muted py-20" aria-labelledby="how-heading">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 id="how-heading" className="text-4xl md:text-5xl font-bold mb-4">{t.how.title}</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">{t.how.subtitle}</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6" aria-hidden>1</div>
+                <h3 className="text-2xl font-semibold mb-4">{t.how.step1Title}</h3>
+                <p className="text-muted-foreground">{t.how.step1Desc}</p>
+              </div>
+              <div className="text-center">
+                <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6" aria-hidden>2</div>
+                <h3 className="text-2xl font-semibold mb-4">{t.how.step2Title}</h3>
+                <p className="text-muted-foreground">{t.how.step2Desc}</p>
+              </div>
+              <div className="text-center">
+                <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6" aria-hidden>3</div>
+                <h3 className="text-2xl font-semibold mb-4">{t.how.step3Title}</h3>
+                <p className="text-muted-foreground">{t.how.step3Desc}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Benefits */}
+        <section className="container mx-auto px-4 py-20" aria-labelledby="benefits-heading">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 id="benefits-heading" className="text-4xl md:text-5xl font-bold mb-6">{t.benefits.title}</h2>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" aria-hidden />
+                  <span className="text-lg">{t.benefits.bullets[0]}</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" aria-hidden />
+                  <span className="text-lg">{t.benefits.bullets[1]}</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" aria-hidden />
+                  <span className="text-lg">{t.benefits.bullets[2]}</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" aria-hidden />
+                  <span className="text-lg">{t.benefits.bullets[3]}</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" aria-hidden />
+                  <span className="text-lg">{t.benefits.bullets[4]}</span>
+                </div>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="p-8">
+                <div className="flex items-center mb-4">
+                  <div className="flex text-yellow-400" aria-hidden>
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 fill-current" />
+                    ))}
+                  </div>
+                  <span className="ml-2 text-muted-foreground">{t.benefits.rating}</span>
+                </div>
+                <blockquote className="text-lg mb-4">{t.benefits.quote}</blockquote>
+                <cite className="text-muted-foreground">{t.benefits.cite}</cite>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="bg-accent py-20" aria-labelledby="cta-heading">
+          <div className="container mx-auto px-4 text-center">
+            <h2 id="cta-heading" className="text-4xl md:text-5xl font-bold mb-6">{t.cta.title}</h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">{t.cta.subtitle}</p>
             <Link href="/talk">
               <Button size="lg" className="font-semibold px-8 py-4 text-lg">
-                {t.hero.primaryBtn}
+                {t.cta.primaryBtn}
                 <MessageCircle className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <HeroVideoDemo buttonLabel={t.hero.secondaryBtn} />
+            <p className="text-sm text-muted-foreground mt-4">{t.cta.note}</p>
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">{t.features.title}</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">{t.features.subtitle}</p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="transition-colors">
-            <CardContent className="p-6">
-              <MessageCircle className="h-12 w-12 mb-4" />
-              <h3 className="text-2xl font-semibold mb-4">{t.features.card1Title}</h3>
-              <p className="text-muted-foreground">{t.features.card1Desc}</p>
-            </CardContent>
-          </Card>
-          <Card className="transition-colors">
-            <CardContent className="p-6">
-              <Globe className="h-12 w-12 mb-4" />
-              <h3 className="text-2xl font-semibold mb-4">{t.features.card2Title}</h3>
-              <p className="text-muted-foreground">{t.features.card2Desc}</p>
-            </CardContent>
-          </Card>
-          <Card className="transition-colors">
-            <CardContent className="p-6">
-              <Users className="h-12 w-12 mb-4" />
-              <h3 className="text-2xl font-semibold mb-4">{t.features.card3Title}</h3>
-              <p className="text-muted-foreground">{t.features.card3Desc}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* How it Works */}
-      <section id="how-it-works" className="bg-muted py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">{t.how.title}</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">{t.how.subtitle}</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">1</div>
-              <h3 className="text-2xl font-semibold mb-4">{t.how.step1Title}</h3>
-              <p className="text-muted-foreground">{t.how.step1Desc}</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">2</div>
-              <h3 className="text-2xl font-semibold mb-4">{t.how.step2Title}</h3>
-              <p className="text-muted-foreground">{t.how.step2Desc}</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-card text-card-foreground border border-border rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6">3</div>
-              <h3 className="text-2xl font-semibold mb-4">{t.how.step3Title}</h3>
-              <p className="text-muted-foreground">{t.how.step3Desc}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">{t.benefits.title}</h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-400" />
-                <span className="text-lg">{t.benefits.bullets[0]}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-400" />
-                <span className="text-lg">{t.benefits.bullets[1]}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-400" />
-                <span className="text-lg">{t.benefits.bullets[2]}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-400" />
-                <span className="text-lg">{t.benefits.bullets[3]}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-400" />
-                <span className="text-lg">{t.benefits.bullets[4]}</span>
-              </div>
-            </div>
-          </div>
-          <Card>
-            <CardContent className="p-8">
-              <div className="flex items-center mb-4">
-                <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-current" />
-                  ))}
-                </div>
-                <span className="ml-2 text-muted-foreground">{t.benefits.rating}</span>
-              </div>
-              <blockquote className="text-lg mb-4">{t.benefits.quote}</blockquote>
-              <cite className="text-muted-foreground">{t.benefits.cite}</cite>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-accent py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">{t.cta.title}</h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">{t.cta.subtitle}</p>
-          <Link href="/talk">
-            <Button size="lg" className="font-semibold px-8 py-4 text-lg">
-              {t.cta.primaryBtn}
-              <MessageCircle className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-          <p className="text-sm text-muted-foreground mt-4">{t.cta.note}</p>
-        </div>
-      </section>
+        </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">

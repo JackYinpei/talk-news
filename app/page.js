@@ -52,11 +52,25 @@ export default async function Home() {
     "url": siteUrl,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "1000" },
-    "keywords": "chat with ai to learn english, ai english tutor, english learning, ai conversation, speak english practice",
-    "inLanguage": "en",
-    "potentialAction": { "@type": "UseAction", "target": `${siteUrl}/talk` }
+    "isAccessibleForFree": true,
+    "inLanguage": locale,
+    "audience": {
+      "@type": "EducationalAudience",
+      "educationalRole": "Learner"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "LingDaily"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": siteUrl
+    },
+    "potentialAction": {
+      "@type": "CommunicateAction",
+      "target": `${siteUrl}/talk`,
+      "name": "Start an English practice conversation"
+    }
   };
 
   return (
