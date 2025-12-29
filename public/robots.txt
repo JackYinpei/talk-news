@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-# Host: lingdaily.yasobi.xyz
+Host: https://lingdaily.yasobi.xyz
 
 # Sitemaps
 Sitemap: https://lingdaily.yasobi.xyz/sitemap.xml
