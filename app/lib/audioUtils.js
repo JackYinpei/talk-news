@@ -1,95 +1,77 @@
-// WAV conversion utilities
-
 /**
- * Writes a string into a DataView at the given offset.
- * @param {DataView} view
- * @param {number} offset
- * @param {string} str
+ * Decodes base64 string to raw bytes.
+ * @param {string} base64
+ * @returns {Uint8Array}
  */
-export function writeString(view, offset, str) {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
+export function base64ToBytes(base64) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
+  return bytes;
 }
 
 /**
- * Converts a Float32Array to 16-bit PCM in a DataView.
- * @param {DataView} output
- * @param {number} offset
- * @param {Float32Array} input
+ * Encodes raw bytes to base64 string.
+ * @param {Uint8Array} bytes
+ * @returns {string}
  */
-export function floatTo16BitPCM(output, offset, input) {
-  for (let i = 0; i < input.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+export function bytesToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
+  return btoa(binary);
 }
 
 /**
- * Encodes a Float32Array as a WAV file.
- * @param {Float32Array} samples
+ * Decodes raw PCM data into an AudioBuffer.
+ * @param {Uint8Array} data
+ * @param {AudioContext} ctx
  * @param {number} sampleRate
- * @returns {ArrayBuffer}
+ * @param {number} numChannels
+ * @returns {Promise<AudioBuffer>}
  */
-export function encodeWAV(samples, sampleRate) {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
+export async function decodeAudioData(
+  data,
+  ctx,
+  sampleRate = 24000,
+  numChannels = 1
+) {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 
-  // RIFF identifier
-  writeString(view, 0, "RIFF");
-  // file length minus RIFF identifier length and file description length
-  view.setUint32(4, 36 + samples.length * 2, true);
-  // RIFF type
-  writeString(view, 8, "WAVE");
-  // format chunk identifier
-  writeString(view, 12, "fmt ");
-  // format chunk length
-  view.setUint32(16, 16, true);
-  // sample format (raw)
-  view.setUint16(20, 1, true);
-  // channel count - forcing mono here by averaging channels
-  view.setUint16(22, 1, true);
-  // sample rate
-  view.setUint32(24, sampleRate, true);
-  // byte rate (sample rate * block align)
-  view.setUint32(28, sampleRate * 2, true);
-  // block align (channel count * bytes per sample)
-  view.setUint16(32, 2, true);
-  // bits per sample
-  view.setUint16(34, 16, true);
-  // data chunk identifier
-  writeString(view, 36, "data");
-  // data chunk length
-  view.setUint32(40, samples.length * 2, true);
-
-  floatTo16BitPCM(view, 44, samples);
-
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      // Convert Int16 to Float32 [-1.0, 1.0]
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
   return buffer;
 }
 
 /**
- * Converts a WebM audio blob to a WAV blob.
- * @param {Blob} blob
- * @returns {Promise<Blob>}
+ * Converts Float32Array (from AudioContext) to 16-bit PCM Blob for the API.
+ * @param {Float32Array} data
+ * @param {number} sampleRate
+ * @returns {{ data: string; mimeType: string }}
  */
-export async function convertWebMBlobToWav(blob) {
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioContext = new AudioContext();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  const numChannels = audioBuffer.numberOfChannels;
-  const length = audioBuffer.length;
-  const combined = new Float32Array(length);
+export function createPcmBlob(data, sampleRate = 16000) {
+  const l = data.length;
+  const int16 = new Int16Array(l);
+  for (let i = 0; i < l; i++) {
+    // Clamp values to [-1, 1] before scaling
+    const s = Math.max(-1, Math.min(1, data[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
 
-  // Average channels to produce mono output
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = audioBuffer.getChannelData(channel);
-    for (let i = 0; i < length; i++) {
-      combined[i] += channelData[i];
-    }
-  }
-  for (let i = 0; i < length; i++) {
-    combined[i] /= numChannels;
-  }
-  const wavBuffer = encodeWAV(combined, audioBuffer.sampleRate);
-  return new Blob([wavBuffer], { type: "audio/wav" });
+  return {
+    data: bytesToBase64(new Uint8Array(int16.buffer)),
+    mimeType: `audio/pcm;rate=${sampleRate}`,
+  };
 }

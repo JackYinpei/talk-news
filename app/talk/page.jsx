@@ -1,95 +1,16 @@
 'use client'
 
-import {
-    RealtimeAgent,
-    RealtimeSession,
-    tool,
-} from '@openai/agents/realtime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { z } from 'zod';
-import { WavRecorder, WavStreamPlayer } from 'wavtools';
 import { v4 as uuidv4 } from "uuid";
 import { useSession } from "next-auth/react"
- 
-
 
 // UI components
 import NewsFeed from "@/app/components/NewsFeed";
 import { History } from "@/app/components/History";
 
-import { getToken } from "@/app/server/token.action";
 import { CombineInitPrompt } from '@/lib/utils';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-
-// Tool: persist unfamiliar expressions for later review
-const extractUnfamiliarEnglishTool = tool({
-    name: 'extractUnfamiliarEnglish',
-    description: 'Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns ',
-    parameters: {
-        type: 'object',
-        properties: {
-            userMessage: {
-                type: 'string',
-                description: 'The user\'s original message that was analyzed',
-            },
-            items: {
-                type: 'array',
-                description: 'List of unfamiliar or interesting elements identified from user input',
-                items: {
-                    type: "object",
-                    properties: {
-                        text: {
-                            type: "string",
-                            description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
-                        },
-                        type: {
-                            type: "string",
-                            enum: ["word", "phrase", "grammar", "other"],
-                            description: "The category of the unfamiliar element"
-                        }
-                    },
-                    required: ["text", "type"]
-                }
-            },
-            context: {
-                type: 'string',
-                description: 'Additional context about the conversation or user level if known',
-            },
-        },
-        required: ['userMessage', 'items'],
-        additionalProperties: false,
-    },
-    execute: async (input) => {
-        const { userMessage, items, context } = input;
-
-        const payload = {
-            items,
-            context,
-            timestamp: new Date().toISOString(),
-            userMessage: userMessage ?? null,
-        };
-
-        console.log('extractUnfamiliarEnglish tool called with parameters:', payload);
-
-        try {
-            const res = await fetch('/api/learning/unfamiliar-english', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                console.error('Failed to save unfamiliar English data:', err);
-                return { resp: 'save_failed', error: err?.error || 'Unknown error' };
-            }
-            const data = await res.json().catch(() => ({}));
-            return { resp: 'saved_in_db', data };
-        } catch (e) {
-            console.error('Error calling save API:', e);
-            return { resp: 'save_error', error: e?.message || String(e) };
-        }
-    },
-});
+import { GeminiLiveServiceImpl } from '@/app/lib/GeminiLiveService';
 
 function buildInstructions(lang, nativeLabel, targetLabel) {
     if (lang === 'en') {
@@ -101,8 +22,8 @@ Core Role:
 
 Key Behaviors:
 - Mix the user's native language (${nativeLabel}) and ${targetLabel} in conversation at first; then adjust toward more ${targetLabel} or more ${nativeLabel} according to user preference.
-- After each substantive user message, call the extractUnfamiliarEnglish tool.
-- Frequently consider and remember to use extractUnfamiliarEnglish — use it aggressively.
+- After each substantive user message, call the extract_unfamiliar_english tool.
+- Frequently consider and remember to use extract_unfamiliar_english — use it aggressively.
 - Prolong practice by asking follow-up questions.
 - Offer gentle corrections; avoid information overload.
 - Vary vocabulary and sentence patterns as learning examples.
@@ -121,7 +42,7 @@ Learning Content Format:
 4. Identify and reinforce the user's language patterns.
 
 Tool Usage:
-- After any user message containing substantive English, call extractUnfamiliarEnglish to identify learning opportunities.
+- After any user message containing substantive English, call extract_unfamiliar_english to identify learning opportunities.
 
 Be encouraging and patient, while maintaining clear conversational leadership for the best learning outcome.`;
     }
@@ -134,7 +55,7 @@ Be encouraging and patient, while maintaining clear conversational leadership fo
 
 重要な行動:
 - 会話の冒頭は母語（${nativeLabel}）と${targetLabel}を織り交ぜ、ユーザーの好みに応じてより${targetLabel}寄り／より${nativeLabel}寄りへ調整する。
-- 各重要なユーザーメッセージの後に extractUnfamiliarEnglish ツールを呼び出す。
+- 各重要なユーザーメッセージの後に extract_unfamiliar_english ツールを呼び出す。
 - このツールを頻繁に（積極的に）使うことを常に意識する。
 - 追い質問で練習時間を伸ばす。
 - 優しく訂正し、情報過多を避ける。
@@ -154,7 +75,7 @@ Be encouraging and patient, while maintaining clear conversational leadership fo
 4. ユーザーの言語パターンを識別・強化する。
 
 ツールの使用:
-- 実質的な英語が含まれるユーザーメッセージの後は、extractUnfamiliarEnglish を呼び出し、学習機会を特定する。
+- 実質的な英語が含まれるユーザーメッセージの後は、extract_unfamiliar_english を呼び出し、学習機会を特定する。
 
 励ましと忍耐を保ちつつ、最良の学習効果のために会話の主導権を明確に維持してください。`;
     }
@@ -166,8 +87,8 @@ Be encouraging and patient, while maintaining clear conversational leadership fo
 
 【关键行为】
 - 用${nativeLabel}和${targetLabel}夹杂的方式进行交谈，然后根据用户偏好，采取更多${targetLabel}或者更多${nativeLabel}的表达方式；
-- 在每个实质性用户消息后使用 extractUnfamiliarEnglish 工具；
-- 经常思考并记得使用 extractUnfamiliarEnglish，这个工具要积极使用；
+- 在每个实质性用户消息后使用 extract_unfamiliar_english 工具；
+- 经常思考并记得使用 extract_unfamiliar_english，这个工具要积极使用；
 - 通过追问延长练习时间；
 - 给予温和纠正，避免信息过载；
 - 变化词汇/句式作为学习示例。
@@ -186,18 +107,9 @@ Be encouraging and patient, while maintaining clear conversational leadership fo
 4. 识别并强化用户的语言模式。
 
 【工具使用】
-- 在每个包含实质英语内容的用户消息后调用 extractUnfamiliarEnglish，识别学习机会。
+- 在每个包含实质英语内容的用户消息后调用 extract_unfamiliar_english，识别学习机会。
 
 保持鼓励和耐心，同时维持清晰的对话主导权以获得最佳学习效果。`;
-}
-
-function createLanguageAgent(nativeLabel, targetLabel, uiLangCode) {
-    const instructions = buildInstructions(uiLangCode, nativeLabel, targetLabel);
-    return new RealtimeAgent({
-        name: 'LanguageLearnTeacher',
-        instructions,
-        tools: [extractUnfamiliarEnglishTool],
-    });
 }
 
 // 生成 chat_history 中使用的 news_key：优先使用 RSS 原始链接保证唯一性，其次才是标题/临时 ID
@@ -255,13 +167,7 @@ const extractMessageText = (message) => {
                 return content.text.trim();
             }
         }
-        if (
-            (content.type === 'input_audio' || content.type === 'output_audio') &&
-            typeof content.transcript === 'string' &&
-            content.transcript.trim()
-        ) {
-            return content.transcript.trim();
-        }
+        // Gemini message structure adaptation if needed, but for now we map to this structure
     }
     return '';
 };
@@ -298,25 +204,26 @@ export default function Home() {
         if (code.startsWith('ja')) return 'ja';
         return 'en';
     }, [nativeLanguage?.code]);
-    const uiText = useMemo(() => ({
-        en: { history: 'History', historyShort: 'History' },
-        zh: { history: '对话历史', historyShort: '历史' },
-        ja: { history: '履歴', historyShort: '履歴' },
-    }[uiLangCode]), [uiLangCode]);
-    
-    const session = useRef(null);
-    const player = useRef(null);
-    const recorder = useRef(null);
-    
+
+    // Gemini Service Ref
+    const serviceRef = useRef(null);
+
     const [isConnected, setIsConnected] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [history, setHistory] = useState([]);
-    // Image capture handled by CameraCapture component.
+    const [error, setError] = useState(null);
 
     const [selectedNews, setSelectedNews] = useState(null)
     const selectedNewsRef = useRef(null)
     const newsContextMessageRef = useRef(null)
     const persistTimeoutRef = useRef(null)
+
+    // UI strings ...
+    const uiText = useMemo(() => ({
+        en: { history: 'History', historyShort: 'History' },
+        zh: { history: '对话历史', historyShort: '历史' },
+        ja: { history: '履歴', historyShort: '履歴' },
+    }[uiLangCode]), [uiLangCode]);
 
     // 将某条新闻下的完整对话历史节流保存到后端
     const persistConversation = useCallback(async (news, conversationHistory) => {
@@ -366,8 +273,6 @@ export default function Home() {
     }, []);
 
     // localStorage helpers for selected news
-
-    // 仅把当前选中的新闻存到 localStorage，刷新后还能定位
     const saveSelectedNewsToStorage = (news) => {
         try {
             localStorage.setItem('selectedNews', JSON.stringify(news));
@@ -429,6 +334,7 @@ export default function Home() {
                 if (rows.length > 0 && Array.isArray(rows[0]?.history)) {
                     const nextHistory = ensureContextMessage(rows[0].history, contextMessage);
                     setHistory(nextHistory);
+
                     if (!rows[0].history.some((item) => item?.itemId === contextMessage?.itemId) && contextMessage) {
                         scheduleConversationPersist(selectedNews, nextHistory);
                     }
@@ -451,206 +357,157 @@ export default function Home() {
         return () => controller.abort();
     }, [selectedNews, userSession?.user?.id, scheduleConversationPersist]);
 
-    // 每次成功连接并选择新闻后，向 Agent 注入当前新闻的初始提示
-    useEffect(() => {
-        if (!session.current) return
-        if (!selectedNews) return
-        if (!isConnected) return
-        session.current.sendMessage(CombineInitPrompt(selectedNews))
-    }, [selectedNews, isConnected])
 
-    // 初始化 Realtime Session，并注册所有事件监听
-    useEffect(() => {
-        // cleanup any existing session instance before creating a new one
-        if (session.current) {
-            try { session.current.close(); } catch {}
-            session.current = null;
-        }
+    // Handle Gemini Message
+    const handleGeminiMessage = useCallback((text, isFinal, role) => {
+        setHistory(prev => {
+            const prevHistory = [...prev];
+            const lastMsg = prevHistory[prevHistory.length - 1];
 
-        const agent = createLanguageAgent(
-            nativeLanguage?.label || '中文',
-            learningLanguage?.label || 'English',
-            uiLangCode,
-        );
-
-        session.current = new RealtimeSession(agent, {
-            transport: 'websocket',
-            model: 'gpt-realtime-mini',
-            config: {
-                audio: {
-                    output: {
-                        voice: 'cedar',
-                    },
-                },
-            },
-        });
-        recorder.current = new WavRecorder({ sampleRate: 24000 });
-        player.current = new WavStreamPlayer({ sampleRate: 24000 });
-
-        session.current.on('audio', (event) => {
-            player.current?.add16BitPCM(event.data, event.responseId);
-        });
-
-        session.current.on('audio_interrupted', () => {
-            // We only need to interrupt the player if we are already playing
-            // everything else is handled by the session
-            player.current?.interrupt();
-        });
-
-        session.current.on('history_updated', (newHistory) => {
-            console.log("history updated", newHistory);
-            
-            setHistory(prevHistory => {
-                // 创建一个映射来保存已有的transcript内容
-                const existingTranscripts = new Map();
-                prevHistory.forEach(item => {
-                    if (item.type === 'message' && item.role === 'assistant') {
-                        item.content.forEach(content => {
-                            if (content.type === 'output_audio' && content.transcript) {
-                                existingTranscripts.set(item.itemId, content.transcript);
-                            }
-                        });
+            // Update existing message (streaming)
+            if (lastMsg && lastMsg.role === (role === 'model' ? 'assistant' : 'user') && !lastMsg.metadata?.isFinal) {
+                const updatedMsg = {
+                    ...lastMsg,
+                    content: [{
+                        type: role === 'model' ? 'output_text' : 'input_text',
+                        text: lastMsg.content[0].text + (text || "") // Append or keep same if empty
+                    }],
+                    metadata: {
+                        ...lastMsg.metadata,
+                        isFinal: isFinal
                     }
-                });
+                };
 
-                const historyIndexMap = new Map();
-                const mergedHistory = [...prevHistory];
-                prevHistory.forEach((item, index) => {
-                    historyIndexMap.set(item.itemId, { item, index });
-                });
+                const newHistory = [...prevHistory.slice(0, -1), updatedMsg];
 
-                const contextMessage = newsContextMessageRef.current;
-                const contextText = extractMessageText(contextMessage);
-
-                const mergedFromAgent = newHistory
-                    .map(item => {
-                        if (item.type === 'message' && item.role === 'assistant' && existingTranscripts.has(item.itemId)) {
-                            return {
-                                ...item,
-                                content: item.content.map(content => {
-                                    if (content.type === 'output_audio' && !content.transcript) {
-                                    return {
-                                        ...content,
-                                        transcript: existingTranscripts.get(item.itemId)
-                                    };
-                                }
-                                return content;
-                            })
-                        };
-                    }
-                    return item;
-                })
-                    .filter((item) => {
-                        if (!contextText) return true;
-                        if (item.type === 'message' && item.role === 'user') {
-                            const text = extractMessageText(item);
-                            if (text && text === contextText) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    });
-
-                mergedFromAgent.forEach((item) => {
-                    const existing = historyIndexMap.get(item.itemId);
-                    if (existing) {
-                        mergedHistory[existing.index] = item;
-                    } else {
-                        historyIndexMap.set(item.itemId, { item, index: mergedHistory.length });
-                        mergedHistory.push(item);
-                    }
-                });
-
-                const finalHistory = ensureContextMessage(mergedHistory, contextMessage);
-                const dedupedHistory = dedupeManualMessages(finalHistory);
-
-                const currentSelectedNews = selectedNewsRef.current;
-                if (currentSelectedNews) {
-                    scheduleConversationPersist(currentSelectedNews, dedupedHistory);
+                // Persist if final
+                if (isFinal && selectedNewsRef.current) {
+                    scheduleConversationPersist(selectedNewsRef.current, newHistory);
                 }
 
-                return dedupedHistory;
-            });
-        });
+                return newHistory;
+            }
 
-        session.current.on('error', (error) => {
-            console.error('error', error);
-        });
+            // Create new message
+            if (text) {
+                const newMsg = {
+                    itemId: uuidv4(),
+                    type: 'message',
+                    role: role === 'model' ? 'assistant' : 'user',
+                    content: [{
+                        type: role === 'model' ? 'output_text' : 'input_text',
+                        text: text
+                    }],
+                    metadata: {
+                        isFinal: isFinal,
+                        createAt: new Date().toISOString()
+                    }
+                };
 
-        return () => {
-            try { session.current?.close(); } catch {}
+                const newHistory = [...prevHistory, newMsg];
+                if (isFinal && selectedNewsRef.current) {
+                    scheduleConversationPersist(selectedNewsRef.current, newHistory);
+                }
+                return newHistory;
+            }
+
+            // Finalize command for empty text
+            if (!text && isFinal && lastMsg && !lastMsg.metadata?.isFinal) {
+                const finalizedMsg = { ...lastMsg, metadata: { ...lastMsg.metadata, isFinal: true } };
+                const newHistory = [...prevHistory.slice(0, -1), finalizedMsg];
+                if (selectedNewsRef.current) {
+                    scheduleConversationPersist(selectedNewsRef.current, newHistory);
+                }
+                return newHistory;
+            }
+
+            return prevHistory;
+        });
+    }, [scheduleConversationPersist]);
+
+    const initService = useCallback(() => {
+        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        if (!apiKey) {
+            setError("Missing Gemini API Key in NEXT_PUBLIC_GEMINI_API_KEY");
+            return;
         }
-    }, [nativeLanguage?.code, nativeLanguage?.label, learningLanguage?.code, learningLanguage?.label, uiLangCode, scheduleConversationPersist]);
 
-    async function record() {
-        await recorder.current?.record(async (data) => {
-            await session.current?.sendAudio(data.mono);
-        });
-    }
+        if (!serviceRef.current) {
+            serviceRef.current = new GeminiLiveServiceImpl({
+                apiKey,
+                onMessage: handleGeminiMessage,
+                onConnectionUpdate: (connected) => {
+                    setIsConnected(connected);
+                    if (!connected) {
+                        // handled disconnect cleanup if needed
+                    }
+                },
+                onError: (err) => {
+                    setError(err);
+                    setIsConnected(false);
+                }
+            });
+        }
+    }, [handleGeminiMessage]);
+
 
     async function connect() {
+        setError(null);
         if (isConnected) {
-            await session.current?.close();
-            await player.current?.interrupt();
-            await recorder.current?.end();
+            serviceRef.current?.disconnect();
             setIsConnected(false);
         } else {
-            await player.current?.connect();
-            const token = await getToken();
-            await session.current?.connect({
-                apiKey: token,
-                url: "wss://talknews.yasobi.xyz/v1/realtime?model=gpt-realtime-mini"
-            });
-            await recorder.current?.begin();
-            await record();
-            setIsConnected(true);
+            initService();
+
+            // Build Context Prompt
+            const baseInstructions = buildInstructions(
+                uiLangCode,
+                nativeLanguage?.label || '中文',
+                learningLanguage?.label || 'English'
+            );
+
+            let fullInstructions = baseInstructions;
+            if (selectedNewsRef.current) {
+                const newsContext = CombineInitPrompt(selectedNewsRef.current);
+                fullInstructions += `\n\nCurrent News Context:\n${newsContext}`;
+            }
+
+            await serviceRef.current?.connect(fullInstructions);
         }
     }
 
     async function toggleMute() {
-        if (isMuted) {
-            await record();
-            setIsMuted(false);
-        } else {
-            await recorder.current?.pause();
-            setIsMuted(true);
-        }
+        if (!serviceRef.current) return;
+        const newMuted = !isMuted;
+        serviceRef.current.setMuted(newMuted);
+        setIsMuted(newMuted);
     }
 
     // 文本输入消息发送，并将本地 history 与后端同步
-    const sendTextMessage = function (input) {
-        if (!session.current) return
-
-        session.current.sendMessage(input)
-        const id = uuidv4().slice(0, 32);
-        const createdAt = new Date().toISOString();
-        const msgItem = {
-            type: "message",
-            role: "user",
-            content: [{
-                type: "input_text",
-                text: input,
-            }],
-            itemId: id,
-            metadata: {
-                manualInput: true,
-                createdAt,
-            },
-            created_at: createdAt,
-        };
-
-        // 追加到 history
-        setHistory(prevHistory => {
-            const newHistory = [...prevHistory, msgItem];
-
-            const currentSelectedNews = selectedNewsRef.current;
-            if (currentSelectedNews) {
-                scheduleConversationPersist(currentSelectedNews, newHistory);
+    const sendTextMessage = async function (input) {
+        if (!serviceRef.current || !isConnected) {
+            // If not connected, we might want to connect first? 
+            // For now, assume user must connect. Or auto-connect.
+            // Let's prompt user to connect if not
+            if (!isConnected) {
+                // Try to connect automatically
+                await connect();
+                // Wait a bit? Handling auto-connect during text send is tricky with async state.
+                // For simplicity, we can just error or try to send if serviceRef exists.
             }
+        }
 
-            return newHistory;
-        });
+        if (serviceRef.current) {
+            await serviceRef.current.sendText(input);
+        }
     }
+
+    // Clean up on unmount
+    useEffect(() => {
+        return () => {
+            serviceRef.current?.disconnect();
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-background">
@@ -709,6 +566,11 @@ export default function Home() {
 
                     {/* Chat Interface - Full width on mobile, 70% on desktop */}
                     <div className="flex-1 lg:w-[70%] flex flex-col min-h-0 lg:h-[calc(100vh-140px)]">
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-600 p-2 rounded mb-2 text-sm">
+                                {error}
+                            </div>
+                        )}
                         <History
                             isConnected={isConnected}
                             isMuted={isMuted}
