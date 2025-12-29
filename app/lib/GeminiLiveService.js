@@ -73,7 +73,8 @@ export class GeminiLiveServiceImpl {
         this.ai = new GoogleGenAI({
             apiKey: apiKey,
             httpOptions: {
-                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL
+                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL || process.env.NEXT_PUBLIC_GEMINI_BASEURL,
+                apiVersion: 'v1alpha'
             }
         });
 
@@ -88,7 +89,7 @@ export class GeminiLiveServiceImpl {
         if (this.outputAudioContext.state === 'suspended') await this.outputAudioContext.resume();
 
         const sessionPromise = this.ai.live.connect({
-            model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+            model: 'gemini-2.5-flash-native-audio-preview-12-2025',
             callbacks: {
                 onopen: async () => {
                     this.config.onConnectionUpdate(true);
@@ -128,6 +129,9 @@ export class GeminiLiveServiceImpl {
 
         try {
             this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            if (this.inputAudioContext.state === 'closed') return;
+
             const source = this.inputAudioContext.createMediaStreamSource(this.mediaStream);
             const scriptProcessor = this.inputAudioContext.createScriptProcessor(4096, 1, 1);
 
@@ -260,8 +264,12 @@ export class GeminiLiveServiceImpl {
             this.mediaStream.getTracks().forEach(t => t.stop());
         }
         this.sources.forEach(s => s.stop());
-        this.inputAudioContext?.close();
-        this.outputAudioContext?.close();
+        if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
+            this.inputAudioContext.close();
+        }
+        if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
+            this.outputAudioContext.close();
+        }
 
         this.session = null;
         this.config.onConnectionUpdate(false);
