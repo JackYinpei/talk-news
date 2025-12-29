@@ -31,7 +31,9 @@ export async function POST() {
                     config: {
                         sessionResumption: {},
                         temperature: 0.7,
-                        responseModalities: ['AUDIO']
+                        responseModalities: ['AUDIO'],
+                        inputAudioTranscription: {},
+                        outputAudioTranscription: {}
                     }
                 },
                 httpOptions: {
