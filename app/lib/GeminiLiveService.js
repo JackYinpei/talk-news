@@ -52,19 +52,30 @@ export class GeminiLiveServiceImpl {
         this.isMuted = false;
 
         this.config = config;
-        this.ai = new GoogleGenAI({
-            apiKey: config.apiKey, httpOptions: {
-                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL
-            }
-        });
+        this.config = config;
+        this.ai = null;
     }
 
     setMuted(muted) {
         this.isMuted = muted;
     }
 
-    async connect(systemInstruction) {
+    async connect(systemInstruction, token) {
         this.systemInstruction = systemInstruction;
+
+        // Initialize AI client just before connection (using fresh token)
+        const apiKey = token || this.config.apiKey;
+        if (!apiKey) {
+            this.config.onError("No API Key or Token provided");
+            return;
+        }
+
+        this.ai = new GoogleGenAI({
+            apiKey: apiKey,
+            httpOptions: {
+                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL
+            }
+        });
 
         // Use standard window.AudioContext, with webkit fallback if necessary (mostly for older Safari, but standard is widely supported now)
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;

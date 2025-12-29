@@ -426,15 +426,8 @@ export default function Home() {
     }, [scheduleConversationPersist]);
 
     const initService = useCallback(() => {
-        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        if (!apiKey) {
-            setError("Missing Gemini API Key in NEXT_PUBLIC_GEMINI_API_KEY");
-            return;
-        }
-
         if (!serviceRef.current) {
             serviceRef.current = new GeminiLiveServiceImpl({
-                apiKey,
                 onMessage: handleGeminiMessage,
                 onConnectionUpdate: (connected) => {
                     setIsConnected(connected);
@@ -457,6 +450,20 @@ export default function Home() {
             serviceRef.current?.disconnect();
             setIsConnected(false);
         } else {
+            // Fetch ephemeral token
+            let token;
+            try {
+                const res = await fetch('/api/gemini-token', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok || !data.token) {
+                    throw new Error(data.error || "Failed to get access token");
+                }
+                token = data.token;
+            } catch (e) {
+                setError("Connection Failed: " + e.message);
+                return;
+            }
+
             initService();
 
             // Build Context Prompt
@@ -472,7 +479,7 @@ export default function Home() {
                 fullInstructions += `\n\nCurrent News Context:\n${newsContext}`;
             }
 
-            await serviceRef.current?.connect(fullInstructions);
+            await serviceRef.current?.connect(fullInstructions, token);
         }
     }
 
