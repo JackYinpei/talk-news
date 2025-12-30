@@ -6,11 +6,113 @@ import { NewsCard } from "./NewsCard";
 // 新闻分类数据，保留一些主要的英文分类
 const categories = [
   { categoryId: 'world', categoryName: 'World', sourceLanguage: 'en' },
-  { categoryId: 'ai', categoryName: 'AI', sourceLanguage: 'en' },
-  { categoryId: 'tech', categoryName: 'Technology', sourceLanguage: 'en' },
+  { categoryId: 'usa', categoryName: 'USA', sourceLanguage: 'en' },
   { categoryId: 'business', categoryName: 'Business', sourceLanguage: 'en' },
+  { categoryId: 'tech', categoryName: 'Technology', sourceLanguage: 'en' },
   { categoryId: 'science', categoryName: 'Science', sourceLanguage: 'en' },
+  { categoryId: 'sports', categoryName: 'Sports', sourceLanguage: 'en' },
+  { categoryId: 'gaming', categoryName: 'Gaming', sourceLanguage: 'en' },
+  { categoryId: 'bay', categoryName: 'Bay Area', sourceLanguage: 'en' },
+
+  { categoryId: '3d_printing', categoryName: '3D Printing', sourceLanguage: 'en' },
+  { categoryId: 'africa', categoryName: 'Africa', sourceLanguage: 'en' },
+  { categoryId: 'ai', categoryName: 'AI', sourceLanguage: 'en' },
+  { categoryId: 'apple', categoryName: 'Apple', sourceLanguage: 'en' },
+  { categoryId: 'argentina', categoryName: 'Argentina', sourceLanguage: 'es' },
+  { categoryId: 'australia', categoryName: 'Australia', sourceLanguage: 'en' },
+  { categoryId: 'austria', categoryName: 'Austria', sourceLanguage: 'de' },
+  { categoryId: 'belgium', categoryName: 'Belgium', sourceLanguage: 'nl' },
+  { categoryId: 'bitcoin', categoryName: 'Bitcoin', sourceLanguage: 'en' },
+  { categoryId: 'brazil', categoryName: 'Brazil', sourceLanguage: 'pt' },
+  { categoryId: 'canada', categoryName: 'Canada', sourceLanguage: 'en' },
+  { categoryId: 'catholic', categoryName: 'Catholic', sourceLanguage: 'en' },
+  { categoryId: 'china', categoryName: 'China', sourceLanguage: 'zh-Hans' },
+  { categoryId: 'coffee', categoryName: 'Coffee', sourceLanguage: 'en' },
+  { categoryId: 'colombia', categoryName: 'Colombia', sourceLanguage: 'es' },
+  { categoryId: 'costa_rica', categoryName: 'Costa Rica', sourceLanguage: 'es' },
+  { categoryId: 'croatia', categoryName: 'Croatia', sourceLanguage: 'hr' },
+  { categoryId: 'cryptocurrency', categoryName: 'Cryptocurrency', sourceLanguage: 'en' },
+  { categoryId: 'cybersecurity', categoryName: 'Cybersecurity', sourceLanguage: 'en' },
+  { categoryId: 'czech_republic', categoryName: 'Czech Republic', sourceLanguage: 'cs' },
+  { categoryId: 'denmark', categoryName: 'Denmark', sourceLanguage: 'dk' },
+  { categoryId: 'economy', categoryName: 'Economy', sourceLanguage: 'en' },
+  { categoryId: 'estonia', categoryName: 'Estonia', sourceLanguage: 'et' },
+  { categoryId: 'europe', categoryName: 'Europe', sourceLanguage: 'en' },
+  { categoryId: 'finland', categoryName: 'Finland', sourceLanguage: 'fi' },
+  { categoryId: 'formula_1', categoryName: 'Formula 1', sourceLanguage: 'en' },
+  { categoryId: 'france', categoryName: 'France', sourceLanguage: 'fr' },
+  { categoryId: 'french_music', categoryName: 'French Music', sourceLanguage: 'fr' },
+  { categoryId: 'germany', categoryName: 'Germany', sourceLanguage: 'de' },
+  { categoryId: 'germany_|_baden-württemberg', categoryName: 'Germany | Baden-Württemberg', sourceLanguage: 'de' },
+  { categoryId: 'germany_|_hesse', categoryName: 'Germany | Hesse', sourceLanguage: 'de' },
+  { categoryId: 'google', categoryName: 'Google', sourceLanguage: 'en' },
+  { categoryId: 'greece', categoryName: 'Greece', sourceLanguage: 'gr' },
+  { categoryId: 'healthcare_|_usa', categoryName: 'Healthcare | USA', sourceLanguage: 'en' },
+  { categoryId: 'hong_kong', categoryName: 'Hong Kong', sourceLanguage: 'en' },
+  { categoryId: 'hungary', categoryName: 'Hungary', sourceLanguage: 'hu' },
+  { categoryId: 'india', categoryName: 'India', sourceLanguage: 'en' },
+  { categoryId: 'india_|_tamil nadu', categoryName: 'Tamil Nadu', sourceLanguage: 'ta' },
+  { categoryId: 'iran', categoryName: 'Iran', sourceLanguage: 'en' },
+  { categoryId: 'ireland', categoryName: 'Ireland', sourceLanguage: 'en' },
+  { categoryId: 'israel', categoryName: 'Israel', sourceLanguage: 'he' },
+  { categoryId: 'italy', categoryName: 'Italy', sourceLanguage: 'it' },
+  { categoryId: 'japan', categoryName: 'Japan', sourceLanguage: 'ja' },
+  { categoryId: 'linux_oss', categoryName: 'Linux & OSS', sourceLanguage: 'en' },
+  { categoryId: 'lithuania', categoryName: 'Lithuania', sourceLanguage: 'lt' },
+  { categoryId: 'mexico', categoryName: 'Mexico', sourceLanguage: 'es' },
+  { categoryId: 'microsoft', categoryName: 'Microsoft', sourceLanguage: 'en' },
+  { categoryId: 'middle_east', categoryName: 'Middle East', sourceLanguage: 'en' },
+  { categoryId: 'morocco', categoryName: 'Morocco', sourceLanguage: 'ar' },
+  { categoryId: 'new_zealand', categoryName: 'New Zealand', sourceLanguage: 'en' },
+  { categoryId: 'nfl', categoryName: 'NFL', sourceLanguage: 'en' },
+  { categoryId: 'nhl', categoryName: 'NHL', sourceLanguage: 'en' },
+  { categoryId: 'nintendo', categoryName: 'Nintendo', sourceLanguage: 'en' },
+  { categoryId: 'norway', categoryName: 'Norway', sourceLanguage: 'no' },
+  { categoryId: 'pakistan', categoryName: 'Pakistan', sourceLanguage: 'en' },
+  { categoryId: 'palestine', categoryName: 'Palestine', sourceLanguage: 'en' },
+  { categoryId: 'philippines', categoryName: 'Philippines', sourceLanguage: 'en' },
+  { categoryId: 'podcasting', categoryName: 'Podcasting', sourceLanguage: 'en' },
+  { categoryId: 'poland', categoryName: 'Poland', sourceLanguage: 'pl' },
+  { categoryId: 'portugal', categoryName: 'Portugal', sourceLanguage: 'pt' },
+  { categoryId: 'privacy', categoryName: 'Privacy', sourceLanguage: 'en' },
+  { categoryId: 'romania', categoryName: 'Romania', sourceLanguage: 'ro' },
+  { categoryId: 'russia', categoryName: 'Russia', sourceLanguage: 'ru' },
+  { categoryId: 'serbia', categoryName: 'Serbia', sourceLanguage: 'sr' },
+  { categoryId: 'simulation_games', categoryName: 'Simulation Games', sourceLanguage: 'en' },
+  { categoryId: 'singapore', categoryName: 'Singapore', sourceLanguage: 'en' },
+  { categoryId: 'slovakia', categoryName: 'Slovakia', sourceLanguage: 'sk' },
+  { categoryId: 'slovenia', categoryName: 'Slovenia', sourceLanguage: 'sl' },
+  { categoryId: 'south_korea', categoryName: 'South Korea', sourceLanguage: 'ko' },
+  { categoryId: 'spain', categoryName: 'Spain', sourceLanguage: 'es' },
+  { categoryId: 'sweden', categoryName: 'Sweden', sourceLanguage: 'sv' },
+  { categoryId: 'switzerland_(de)', categoryName: 'Switzerland (DE)', sourceLanguage: 'de' },
+  { categoryId: 'switzerland_(fr)', categoryName: 'Switzerland (FR)', sourceLanguage: 'fr' },
+  { categoryId: 'taiwan', categoryName: 'Taiwan', sourceLanguage: 'zh-Hant' },
+  { categoryId: 'thailand', categoryName: 'Thailand', sourceLanguage: 'th' },
+  { categoryId: 'the_netherlands', categoryName: 'The Netherlands', sourceLanguage: 'nl' },
+  { categoryId: 'turkey', categoryName: 'Turkey', sourceLanguage: 'tr' },
+  { categoryId: 'uk', categoryName: 'UK', sourceLanguage: 'en' },
+  { categoryId: 'ukraine', categoryName: 'Ukraine', sourceLanguage: 'uk' },
+
+  { categoryId: 'usa_|_austin, tx', categoryName: 'USA | Austin, TX', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_chicago', categoryName: 'USA | Chicago', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_colorado', categoryName: 'USA | Colorado', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_hawaii', categoryName: 'USA | Hawaii', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_michigan', categoryName: 'USA | Michigan', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_minnesota', categoryName: 'USA | Minnesota', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_nevada', categoryName: 'USA | Nevada', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_new mexico', categoryName: 'USA | New Mexico', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_new york city', categoryName: 'USA | New York City', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_ohio', categoryName: 'USA | Ohio', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_utah', categoryName: 'USA | Utah', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_vermont', categoryName: 'USA | Vermont', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_virginia', categoryName: 'USA | Virginia', sourceLanguage: 'en' },
+  { categoryId: 'usa_|_washington', categoryName: 'USA | Washington', sourceLanguage: 'en' },
+
+  { categoryId: 'watches_&_horology', categoryName: 'Watches & Horology', sourceLanguage: 'en' },
+  { categoryId: 'onthisday', categoryName: 'On This Day', sourceLanguage: 'en' }
 ];
+
 
 export default function NewsFeed({ onArticleSelect, selectedNews = null, targetLanguage = 'zh-CN', nativeLanguage = 'zh-CN', isMobile = false }) {
   const [articles, setArticles] = useState([]);
@@ -29,21 +131,21 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: article.title, targetLang: nativeLanguage }),
       })
-      .then(res => res.ok ? res.json() : null)
-      .then(transData => {
-        if (transData && transData.translation) {
-          setArticles(prevArticles =>
-            prevArticles.map(prevArticle =>
-              prevArticle.link === article.link
-                ? { ...prevArticle, translatedTitle: transData.translation }
-                : prevArticle
-            )
-          );
-        }
-      })
-      .catch(err => {
-        console.error(`Failed to translate article title: "${article.title}"`, err);
-      });
+        .then(res => res.ok ? res.json() : null)
+        .then(transData => {
+          if (transData && transData.translation) {
+            setArticles(prevArticles =>
+              prevArticles.map(prevArticle =>
+                prevArticle.link === article.link
+                  ? { ...prevArticle, translatedTitle: transData.translation }
+                  : prevArticle
+              )
+            );
+          }
+        })
+        .catch(err => {
+          console.error(`Failed to translate article title: "${article.title}"`, err);
+        });
     });
   }, [nativeLanguage]);
 
@@ -61,7 +163,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(rssText, 'application/xml');
       const items = xmlDoc.querySelectorAll('item');
-      
+
       const newArticles = Array.from(items).map((item, index) => {
         let description = item.querySelector('description')?.textContent || '';
         const sourcesIndex = description.indexOf('<h3>Sources:</h3>');
@@ -81,7 +183,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
 
         // 清理多余的空白字符
         description = description.replace(/\s+/g, ' ').trim();
-        
+
         return {
           id: `${category}-${index}`,
           title: item.querySelector('title')?.textContent || 'Untitled',
@@ -157,11 +259,10 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
 
     return (
       <div
-        className={`transition-all duration-500 ease-in-out ${isMobile ? "px-2 sticky top-0 bg-background z-10" : "px-2"} ${
-          hasSelectedNews
+        className={`transition-all duration-500 ease-in-out ${isMobile ? "px-2 sticky top-0 bg-background z-10" : "px-2"} ${hasSelectedNews
             ? 'max-h-0 opacity-0 pointer-events-none overflow-hidden -translate-y-2 mb-0 custom-scroll'
             : 'max-h-24 opacity-100 pointer-events-auto mb-4 translate-y-0'
-        }`}
+          }`}
       >
         <div className={`relative flex items-center min-h-0 transition-all duration-500 ease-in-out ${hasSelectedNews ? "scale-95" : "scale-100"}`}>
           <div
@@ -178,11 +279,10 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
                 key={category.categoryId}
                 onClick={() => setSelectedCategory(category.categoryId)}
                 disabled={loading}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  selectedCategory === category.categoryId
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${selectedCategory === category.categoryId
                     ? "bg-primary text-primary-foreground shadow-md scale-105"
                     : "bg-secondary hover:bg-secondary/80 text-secondary-foreground hover:scale-102"
-                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {category.categoryName}
               </button>
@@ -228,7 +328,7 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
   return (
     <div>
       <CategorySelector />
-      <div 
+      <div
         ref={isMobile ? listContainerRef : null}
         className={isMobile ? "flex gap-3 overflow-x-auto custom-scroll px-2" : "space-y-4 px-2 py-2"}
         style={isMobile ? {
@@ -239,48 +339,48 @@ export default function NewsFeed({ onArticleSelect, selectedNews = null, targetL
         } : {}}
       >
         {articles.map((article) => {
-        // 转换数据格式以匹配现有NewsCard组件
-        const newsData = {
-          id: article.id,
-          title: article.translatedTitle || article.title,
-          description: article.description,
-          category: article.category,
-          date: article.date,
-          originalTitle: article.title,
-          link: article.link,
-          urlToImage: article.urlToImage
-        };
-        
-        const isSelected = selectedNews?.id === article.id;
-        
-        return (
-          <div 
-            key={article.id}
-            className={
-              isMobile
-                ? mobileHasSelection
-                  ? `flex-shrink-0 transition-all duration-300 ease-in-out w-full min-w-full max-w-full h-auto ${isSelected ? "scale-100 opacity-100" : "scale-95 opacity-80"}`
-                  : "flex-shrink-0 transition-all duration-300 ease-in-out w-[260px] h-48"
-                : `transition-all duration-300 ease-in-out ${isSelected ? "h-96" : "h-48"}`
-            }
-            ref={(el) => {
-              if (el) {
-                cardRefs.current[article.id] = el;
-              } else {
-                delete cardRefs.current[article.id];
+          // 转换数据格式以匹配现有NewsCard组件
+          const newsData = {
+            id: article.id,
+            title: article.translatedTitle || article.title,
+            description: article.description,
+            category: article.category,
+            date: article.date,
+            originalTitle: article.title,
+            link: article.link,
+            urlToImage: article.urlToImage
+          };
+
+          const isSelected = selectedNews?.id === article.id;
+
+          return (
+            <div
+              key={article.id}
+              className={
+                isMobile
+                  ? mobileHasSelection
+                    ? `flex-shrink-0 transition-all duration-300 ease-in-out w-full min-w-full max-w-full h-auto ${isSelected ? "scale-100 opacity-100" : "scale-95 opacity-80"}`
+                    : "flex-shrink-0 transition-all duration-300 ease-in-out w-[260px] h-48"
+                  : `transition-all duration-300 ease-in-out ${isSelected ? "h-96" : "h-48"}`
               }
-            }}
-          >
-            <NewsCard
-              news={newsData}
-              isSelected={isSelected}
-              onSelect={() => onArticleSelect && onArticleSelect(isSelected ? null : newsData)}
-              compact={isMobile}
-              mobileHasSelection={mobileHasSelection}
-            />
-          </div>
-        );
-      })}
+              ref={(el) => {
+                if (el) {
+                  cardRefs.current[article.id] = el;
+                } else {
+                  delete cardRefs.current[article.id];
+                }
+              }}
+            >
+              <NewsCard
+                news={newsData}
+                isSelected={isSelected}
+                onSelect={() => onArticleSelect && onArticleSelect(isSelected ? null : newsData)}
+                compact={isMobile}
+                mobileHasSelection={mobileHasSelection}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

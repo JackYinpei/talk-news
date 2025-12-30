@@ -313,6 +313,13 @@ export default function Home() {
         const contextMessage = createNewsContextMessage(selectedNews);
         newsContextMessageRef.current = contextMessage;
 
+        // If we are already connected, we need to inform the AI about the new news context
+        if (serviceRef.current && serviceRef.current.session) {
+            const newsContext = CombineInitPrompt(selectedNews);
+            // Send as an invisible context update
+            serviceRef.current.sendContextMessage(`[System Update] The user has switched to a new news article. Please focus on this new content:\n${newsContext}`);
+        }
+
         if (!userSession?.user?.id) {
             setHistory(ensureContextMessage([], contextMessage));
             return;
@@ -473,13 +480,14 @@ export default function Home() {
                 learningLanguage?.label || 'English'
             );
 
-            let fullInstructions = baseInstructions;
-            if (selectedNewsRef.current) {
-                const newsContext = CombineInitPrompt(selectedNewsRef.current);
-                fullInstructions += `\n\nCurrent News Context:\n${newsContext}`;
-            }
+            await serviceRef.current?.connect(baseInstructions, token);
 
-            await serviceRef.current?.connect(fullInstructions, token);
+            // Once connected, if there is a selected news item, send it as a context update immediately
+            if (selectedNewsRef.current && serviceRef.current) {
+                const newsContext = CombineInitPrompt(selectedNewsRef.current);
+                // Send as an invisible context update to "seed" the conversation with the news
+                await serviceRef.current.sendContextMessage(`[System Initialize] User is viewing this news article. START the conversation by briefly introducing this news to the user:\n${newsContext}`);
+            }
         }
     }
 
@@ -585,6 +593,21 @@ export default function Home() {
                             connect={connect}
                             history={history}
                             sendTextMessage={sendTextMessage}
+                            onInputFocus={() => {
+                                // Mute mic when typing to prevent double inputs (audio + text)
+                                if (!isMuted && serviceRef.current) {
+                                    // Store that we auto-muted, so we can restore later
+                                    serviceRef.current._autoMuted = true;
+                                    toggleMute();
+                                }
+                            }}
+                            onInputBlur={() => {
+                                // Restore mic if it was auto-muted
+                                if (isMuted && serviceRef.current && serviceRef.current._autoMuted) {
+                                    serviceRef.current._autoMuted = false;
+                                    toggleMute();
+                                }
+                            }}
                         />
                     </div>
                 </div>

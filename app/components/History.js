@@ -12,6 +12,8 @@ export function History({
     connect,
     history,
     sendTextMessage,
+    onInputFocus,
+    onInputBlur,
 }) {
     const { nativeLanguage } = useLanguage();
     const langCode = (nativeLanguage?.code || 'en').toLowerCase().startsWith('zh')
@@ -62,7 +64,7 @@ export function History({
         const id = requestAnimationFrame(() => {
             try {
                 el.scrollTop = el.scrollHeight;
-            } catch {}
+            } catch { }
         });
         return () => cancelAnimationFrame(id);
     }, [history, mounted]);
@@ -118,20 +120,20 @@ export function History({
                 <button
                     onClick={() => connect()}
                     className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isConnected
-                            ? 'bg-destructive text-white hover:bg-destructive/90'
-                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        ? 'bg-destructive text-white hover:bg-destructive/90'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
                         }`}
                     title={isConnected ? t.disconnect : t.connect}
                 >
                     <span className="lg:hidden">{isConnected ? "🌐" : "📶"}</span>
                     <span className="hidden lg:inline">{isConnected ? t.disconnect : t.connect}</span>
                 </button>
-                
+
                 <button
                     onClick={toggleMute}
                     className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isMuted
-                            ? 'bg-destructive text-white hover:bg-destructive/90'
-                            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                        ? 'bg-destructive text-white hover:bg-destructive/90'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                         }`}
                     title={isMuted ? t.unmute : t.mute}
                 >
@@ -149,8 +151,14 @@ export function History({
                             setInputMessage('');
                         }
                     }}
-                    onFocus={() => setIsInputFocused(true)}
-                    onBlur={() => setIsInputFocused(false)}
+                    onFocus={() => {
+                        setIsInputFocused(true);
+                        if (onInputFocus) onInputFocus();
+                    }}
+                    onBlur={() => {
+                        setIsInputFocused(false);
+                        if (onInputBlur) onInputBlur();
+                    }}
                     placeholder={t.placeholder}
                     className="flex-1 min-w-0 px-4 py-2 rounded-lg bg-background text-foreground border border-input outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                 />

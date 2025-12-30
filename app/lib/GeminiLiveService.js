@@ -1,29 +1,31 @@
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { GoogleGenAI, Modality, Behavior, FunctionResponseScheduling } from "@google/genai";
 import { base64ToBytes, decodeAudioData, createPcmBlob } from "./audioUtils";
 
+// Tool structure for Gemini
 // Tool structure for Gemini
 export const extractUnfamiliarEnglishToolDecl = {
     name: "extract_unfamiliar_english",
     description: "Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns",
+    behavior: "NON_BLOCKING",
     parameters: {
-        type: Type.OBJECT,
+        type: "object",
         properties: {
             userMessage: {
-                type: Type.STRING,
+                type: "string",
                 description: "The user's original message that was analyzed"
             },
             items: {
-                type: Type.ARRAY,
+                type: "array",
                 description: "List of unfamiliar or interesting elements identified from user input",
                 items: {
-                    type: Type.OBJECT,
+                    type: "object",
                     properties: {
                         text: {
-                            type: Type.STRING,
+                            type: "string",
                             description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
                         },
                         type: {
-                            type: Type.STRING,
+                            type: "string",
                             enum: ["word", "phrase", "grammar", "other"],
                             description: "The category of the unfamiliar element"
                         }
@@ -32,7 +34,7 @@ export const extractUnfamiliarEnglishToolDecl = {
                 }
             },
             context: {
-                type: Type.STRING,
+                type: "string",
                 description: "Additional context about the conversation or user level if known"
             }
         },
@@ -51,7 +53,6 @@ export class GeminiLiveServiceImpl {
         this.systemInstruction = "";
         this.isMuted = false;
 
-        this.config = config;
         this.config = config;
         this.ai = null;
     }
@@ -88,6 +89,9 @@ export class GeminiLiveServiceImpl {
         if (this.inputAudioContext.state === 'suspended') await this.inputAudioContext.resume();
         if (this.outputAudioContext.state === 'suspended') await this.outputAudioContext.resume();
 
+        const toolsConfig = [{ functionDeclarations: [extractUnfamiliarEnglishToolDecl] }];
+        console.log("Gemini Live Connecting with tools:", toolsConfig);
+
         const sessionPromise = this.ai.live.connect({
             model: 'gemini-2.5-flash-native-audio-preview-12-2025',
             callbacks: {
@@ -110,11 +114,11 @@ export class GeminiLiveServiceImpl {
             },
             config: {
                 responseModalities: [Modality.AUDIO],
-                systemInstruction: systemInstruction,
+                systemInstruction: { parts: [{ text: systemInstruction }] },
                 speechConfig: {
                     voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
                 },
-                tools: [{ functionDeclarations: [extractUnfamiliarEnglishToolDecl] }],
+                tools: toolsConfig,
                 outputAudioTranscription: {},
                 inputAudioTranscription: {},
             },
@@ -230,7 +234,11 @@ export class GeminiLiveServiceImpl {
                     functionResponses: [{
                         name: 'extract_unfamiliar_english',
                         id: callId,
-                        response: { result: "saved", data }
+                        response: {
+                            result: "saved",
+                            data,
+                            scheduling: FunctionResponseScheduling.SILENT
+                        }
                     }]
                 });
             }
@@ -242,7 +250,9 @@ export class GeminiLiveServiceImpl {
                     functionResponses: [{
                         name: 'extract_unfamiliar_english',
                         id: callId,
-                        response: { error: String(e) }
+                        response: {
+                            error: String(e)
+                        }
                     }]
                 });
             }
@@ -253,9 +263,22 @@ export class GeminiLiveServiceImpl {
         if (this.session) {
             // Optimistically update UI
             this.config.onMessage(text, true, 'user');
-            await this.session.sendRealtimeInput({
-                content: [{ parts: [{ text }] }]
-            });
+
+            // Use sendClientContent for text input as per Gemini Live API docs
+            // content: [{ parts: [{ text }] }] is for sendRealtimeInput which is mainly for media
+            // sendClientContent is better for text turns
+            this.session.sendClientContent({ turns: text, turnComplete: true });
+        }
+    }
+
+    /**
+     * Sends a context update (e.g. news content) to the model without displaying it in the user's chat UI.
+     * This acts as a 'System' or 'Context' injection during the session.
+     */
+    async sendContextMessage(text) {
+        if (this.session) {
+            console.log("Sending context update:", text);
+            this.session.sendClientContent({ turns: text, turnComplete: true });
         }
     }
 
