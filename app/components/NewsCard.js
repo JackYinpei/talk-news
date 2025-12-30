@@ -1,6 +1,6 @@
 "use client"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 export function NewsCard({

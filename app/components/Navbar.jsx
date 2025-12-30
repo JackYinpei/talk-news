@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/app/components/ui/button'
 import ThemeToggle from '@/app/components/ThemeToggle'
 
 export default function Navbar() {

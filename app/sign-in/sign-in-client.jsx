@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { LogIn, MessageCircle, ShieldCheck } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/app/components/ui/button"
 import {
   Card,
   CardContent,
@@ -13,7 +13,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/app/components/ui/card"
 
 export default function SignInClient({ googleEnabled }) {
   const [isPending, startTransition] = useTransition()

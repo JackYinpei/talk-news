@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/app/components/ui/button'
 import { Zap, X } from 'lucide-react'
 
 const DEFAULT_VIDEO_SRC = 'https://talknews-1308277566.cos.ap-shanghai.myqcloud.com/talknws-show.mp4'

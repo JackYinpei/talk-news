@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/app/components/ui/button'
 import LanguageSelector from '@/app/components/LanguageSelector'
 import { useLanguage } from '@/app/contexts/LanguageContext'
 

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Navbar from '@/app/components/Navbar'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/app/components/ui/button'
+import { Card, CardContent } from '@/app/components/ui/card'
 
 function formatDate(iso) {
   try {
