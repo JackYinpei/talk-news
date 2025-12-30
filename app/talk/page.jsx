@@ -221,9 +221,9 @@ export default function Home() {
 
     // UI strings ...
     const uiText = useMemo(() => ({
-        en: { history: 'History', historyShort: 'History' },
-        zh: { history: '对话历史', historyShort: '历史' },
-        ja: { history: '履歴', historyShort: '履歴' },
+        en: { history: 'History', historyShort: 'History', vocab: 'Vocabulary' },
+        zh: { history: '对话历史', historyShort: '历史', vocab: '生词本' },
+        ja: { history: '履歴', historyShort: '履歴', vocab: '単語帳' },
     }[uiLangCode]), [uiLangCode]);
 
     // 将某条新闻下的完整对话历史节流保存到后端
@@ -539,9 +539,14 @@ export default function Home() {
                             <h1 className="text-2xl font-bold text-card-foreground">English Learning Hub</h1>
                             <p className="text-muted-foreground mt-1">Learn English through news and AI conversation</p>
                         </div>
-                        <a href="/history" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-                            {uiText.history}
-                        </a>
+                        <div className="flex items-center gap-4">
+                            <a href="/history" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                                {uiText.history}
+                            </a>
+                            <a href="/history/words" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                                {uiText.vocab}
+                            </a>
+                        </div>
                     </div>
                 </div>
             </header>
