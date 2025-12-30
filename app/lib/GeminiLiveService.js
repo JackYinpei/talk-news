@@ -5,6 +5,7 @@ import { base64ToBytes, decodeAudioData, createPcmBlob } from "./audioUtils";
 // Tool structure for Gemini
 export const extractUnfamiliarEnglishToolDecl = {
     name: "extract_unfamiliar_english",
+    behavior: Behavior.NON_BLOCKING,
     description: "Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns",
     parameters: {
         type: Type.OBJECT,
@@ -88,7 +89,7 @@ export class GeminiLiveServiceImpl {
         if (this.inputAudioContext.state === 'suspended') await this.inputAudioContext.resume();
         if (this.outputAudioContext.state === 'suspended') await this.outputAudioContext.resume();
 
-        const toolsConfig = [{ functionDeclarations: [extractUnfamiliarEnglishToolDecl] }];
+        const toolsConfig = [{ functionDeclarations: [extractUnfamiliarEnglishToolDecl] }, { googleSearch: {} }];
         console.log("Gemini Live Connecting with tools:", toolsConfig);
 
         const sessionPromise = this.ai.live.connect({
@@ -166,6 +167,12 @@ export class GeminiLiveServiceImpl {
     }
 
     async handleServerMessage(message) {
+        const isAudioMessage = message.serverContent?.modelTurn?.parts?.some(part => part.inlineData?.mimeType?.startsWith('audio/pcm'));
+        const isSystemMessage = message.setupComplete || message.sessionResumptionUpdate;
+
+        if (!isAudioMessage && !isSystemMessage) {
+            console.log("SERVER MESSAGE:", JSON.stringify(message, null, 2));
+        }
         // Audio Output
         const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
         if (audioData && this.outputAudioContext) {
