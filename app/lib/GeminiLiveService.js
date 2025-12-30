@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, Behavior, FunctionResponseScheduling } from "@google/genai";
+import { GoogleGenAI, Modality, Behavior, FunctionResponseScheduling, Type } from "@google/genai";
 import { base64ToBytes, decodeAudioData, createPcmBlob } from "./audioUtils";
 
 // Tool structure for Gemini
@@ -6,26 +6,25 @@ import { base64ToBytes, decodeAudioData, createPcmBlob } from "./audioUtils";
 export const extractUnfamiliarEnglishToolDecl = {
     name: "extract_unfamiliar_english",
     description: "Aggressive MODE: Call this tool AGGRESSIVELY whenever the above history contains ANY English (full sentence, a single word, code comments, or CN-EN mixed). Even if the user does NOT explicitly ask about a word, scan for potentially unfamiliar vocabulary, phrases, collocations, idioms, phrasal verbs, or grammar patterns",
-    behavior: "NON_BLOCKING",
     parameters: {
-        type: "object",
+        type: Type.OBJECT,
         properties: {
             userMessage: {
-                type: "string",
+                type: Type.STRING,
                 description: "The user's original message that was analyzed"
             },
             items: {
-                type: "array",
+                type: Type.ARRAY,
                 description: "List of unfamiliar or interesting elements identified from user input",
                 items: {
-                    type: "object",
+                    type: Type.OBJECT,
                     properties: {
                         text: {
-                            type: "string",
+                            type: Type.STRING,
                             description: "The exact word, phrase, or grammar pattern the user is unsure about or curious about"
                         },
                         type: {
-                            type: "string",
+                            type: Type.STRING,
                             enum: ["word", "phrase", "grammar", "other"],
                             description: "The category of the unfamiliar element"
                         }
@@ -34,7 +33,7 @@ export const extractUnfamiliarEnglishToolDecl = {
                 }
             },
             context: {
-                type: "string",
+                type: Type.STRING,
                 description: "Additional context about the conversation or user level if known"
             }
         },
@@ -74,7 +73,7 @@ export class GeminiLiveServiceImpl {
         this.ai = new GoogleGenAI({
             apiKey: apiKey,
             httpOptions: {
-                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL || process.env.NEXT_PUBLIC_GEMINI_BASEURL,
+                baseUrl: process.env.NEXT_PUBLIC_GEMINI_BASE_URL,
                 apiVersion: 'v1alpha'
             }
         });
@@ -121,6 +120,9 @@ export class GeminiLiveServiceImpl {
                 tools: toolsConfig,
                 outputAudioTranscription: {},
                 inputAudioTranscription: {},
+                thinkingConfig: {
+                    thinkingBudget: 1024,
+                },
             },
         });
 
@@ -204,11 +206,14 @@ export class GeminiLiveServiceImpl {
         }
 
         // Tool Call Handling
-        const toolCalls = message.toolCall?.functionCalls;
-        if (toolCalls && toolCalls.length > 0) {
-            for (const call of toolCalls) {
-                if (call.name === 'extract_unfamiliar_english') {
-                    await this.handleExtractUnfamiliarEnglish(call.args, call.id);
+        if (message.toolCall) {
+            console.log("Gemini requested tool call:", message.toolCall);
+            const toolCalls = message.toolCall?.functionCalls;
+            if (toolCalls && toolCalls.length > 0) {
+                for (const call of toolCalls) {
+                    if (call.name === 'extract_unfamiliar_english') {
+                        await this.handleExtractUnfamiliarEnglish(call.args, call.id);
+                    }
                 }
             }
         }
@@ -277,7 +282,6 @@ export class GeminiLiveServiceImpl {
      */
     async sendContextMessage(text) {
         if (this.session) {
-            console.log("Sending context update:", text);
             this.session.sendClientContent({ turns: text, turnComplete: true });
         }
     }

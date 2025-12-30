@@ -32,13 +32,16 @@ export async function POST() {
                         sessionResumption: {},
                         temperature: 0.7,
                         responseModalities: ['AUDIO'],
+                        thinkingConfig: {
+                            thinkingBudget: 1024,
+                        },
                         inputAudioTranscription: {},
                         outputAudioTranscription: {}
                     }
                 },
                 httpOptions: {
                     apiVersion: 'v1alpha'
-                }
+                },
             }
         });
 
