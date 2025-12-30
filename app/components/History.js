@@ -7,6 +7,7 @@ import { FunctionCallMessage } from './FunctionCallMessage';
 
 export function History({
     isConnected,
+    isConnecting,
     isMuted,
     toggleMute,
     connect,
@@ -25,6 +26,7 @@ export function History({
     const t = {
         en: {
             connect: 'Connect',
+            connecting: 'Connecting...',
             disconnect: 'Disconnect',
             mute: 'Mute',
             unmute: 'Unmute',
@@ -33,6 +35,7 @@ export function History({
         },
         zh: {
             connect: '连接',
+            connecting: '连接中...',
             disconnect: '断开',
             mute: '静音',
             unmute: '取消静音',
@@ -41,6 +44,7 @@ export function History({
         },
         ja: {
             connect: '接続',
+            connecting: '接続中...',
             disconnect: '切断',
             mute: 'ミュート',
             unmute: 'ミュート解除',
@@ -118,15 +122,22 @@ export function History({
             </div>
             <div className="flex gap-1 mt-2 items-center">
                 <button
-                    onClick={() => connect()}
+                    onClick={() => !isConnecting && connect()}
+                    disabled={isConnecting}
                     className={`${isInputFocused ? 'hidden sm:flex' : 'flex'} w-10 h-10 lg:w-auto lg:px-4 rounded-full lg:rounded-lg font-medium transition-colors items-center justify-center text-lg flex-shrink-0 ${isConnected
                         ? 'bg-destructive text-white hover:bg-destructive/90'
-                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : isConnecting
+                            ? 'bg-primary/50 text-primary-foreground cursor-wait'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
                         }`}
-                    title={isConnected ? t.disconnect : t.connect}
+                    title={isConnected ? t.disconnect : isConnecting ? t.connecting : t.connect}
                 >
-                    <span className="lg:hidden">{isConnected ? "🌐" : "📶"}</span>
-                    <span className="hidden lg:inline">{isConnected ? t.disconnect : t.connect}</span>
+                    <span className={`lg:hidden ${isConnecting ? 'opacity-50 grayscale' : ''}`}>
+                        {isConnected ? "🌐" : "📶"}
+                    </span>
+                    <span className="hidden lg:inline">
+                        {isConnected ? t.disconnect : isConnecting ? t.connecting : t.connect}
+                    </span>
                 </button>
 
                 <button
@@ -146,7 +157,8 @@ export function History({
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter' && inputMessage.trim()) {
+                        if (e.key === 'Enter' && !e.nativeEvent.isComposing && inputMessage.trim()) {
+                            e.preventDefault();
                             sendTextMessage(inputMessage.trim());
                             setInputMessage('');
                         }

@@ -209,6 +209,7 @@ export default function Home() {
     const serviceRef = useRef(null);
 
     const [isConnected, setIsConnected] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [history, setHistory] = useState([]);
     const [error, setError] = useState(null);
@@ -438,6 +439,7 @@ export default function Home() {
                 onMessage: handleGeminiMessage,
                 onConnectionUpdate: (connected) => {
                     setIsConnected(connected);
+                    setIsConnecting(false);
                     if (!connected) {
                         // handled disconnect cleanup if needed
                     }
@@ -445,6 +447,7 @@ export default function Home() {
                 onError: (err) => {
                     setError(err);
                     setIsConnected(false);
+                    setIsConnecting(false);
                 }
             });
         }
@@ -457,6 +460,7 @@ export default function Home() {
             serviceRef.current?.disconnect();
             setIsConnected(false);
         } else {
+            setIsConnecting(true);
             // Fetch ephemeral token
             let token;
             try {
@@ -468,6 +472,7 @@ export default function Home() {
                 token = data.token;
             } catch (e) {
                 setError("Connection Failed: " + e.message);
+                setIsConnecting(false);
                 return;
             }
 
@@ -588,6 +593,7 @@ export default function Home() {
                         )}
                         <History
                             isConnected={isConnected}
+                            isConnecting={isConnecting}
                             isMuted={isMuted}
                             toggleMute={toggleMute}
                             connect={connect}
