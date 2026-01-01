@@ -134,7 +134,7 @@ export async function POST(req) {
         if (!feedRes.ok) throw new Error('Failed to fetch news');
 
         const feedText = await feedRes.text();
-        const parser = new XMLParser();
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
         const feed = parser.parse(feedText);
         // Handle RSS structure variations safely
         const channel = feed.rss?.channel || feed.feed;
@@ -145,48 +145,84 @@ export async function POST(req) {
             return NextResponse.json({ error: "No items found" }, { status: 404 });
         }
 
+        function cleanDescription(html) {
+            if (!html) return '';
+            let clean = html;
+            clean = clean.replace(/<h3>Sources:?<\/h3>[\s\S]*/i, '');
+            clean = clean.replace(/<img[^>]*>/g, '');
+            clean = clean.replace(/<a[^>]*>([^<]+)<\/a>/g, '$1');
+            clean = clean.replace(/<br\s*\/?>/gi, '\n');
+            return clean.trim();
+        }
+
         const newsContext = items.map((item, i) => `
   Item ${i + 1}:
   Title: ${item.title}
-  Description: ${item.description || item.summary || ''}
+  Description: ${cleanDescription(item.description || item.summary || '')}
   PubDate: ${item.pubDate || item.published || ''}
 `).join('\n\n');
 
         // Extract image
-        // Try to find an image in the first item
+        // Try to find an image in the items (fallback to next if first fails)
         let imageUrl = '/placeholder.jpg';
-        const firstItem = items[0];
-        const desc = firstItem.description || '';
-        const imgMatch = desc.match(/src="([^"]+)"/);
-        if (imgMatch) {
-            imageUrl = imgMatch[1];
-        } else if (firstItem['media:content'] && firstItem['media:content']['@_url']) {
-            imageUrl = firstItem['media:content']['@_url'];
+
+        for (const item of items) {
+            const desc = item.description || '';
+            // Match src='...' or src="..."
+            const imgMatch = desc.match(/src=["']([^"']+)["']/);
+
+            if (imgMatch) {
+                imageUrl = imgMatch[1];
+                break;
+            } else if (item['media:content'] && item['media:content']['@_url']) {
+                imageUrl = item['media:content']['@_url'];
+                break;
+            }
         }
 
         // 2. Generate Content (Title, Summary, Script)
         // We use a separate call for text generation
         const scriptPrompt = `
-  You are a professional podcast producer for "LingDaily News".
-  Information:
-  ${newsContext}
+Role: You are the Lead Producer for "LingDaily News", a high-end bilingual education podcast.
 
-  Task:
-  Also generate a title and a podcast script.
+Context Information:
+${newsContext}
 
-  Requirements:
-  1. **Title**: Catchy, relevant to the headlines.
-  2. **Summary**: A comprehensive, well-structured summary of the news stories provided. MUST be at least 1000 words. Use markdown for formatting. This is for reading.
-  3. **Podcast Script**: A dialogue or monologue for a host named "Jaz".
-     - Mix of Chinese and English. (Mainly English, explain difficult concepts in Chinese, or casual switching).
-     - Tone: Energetic, clear, "The Morning Hype" style.
+Task: 
+Generate a comprehensive news package based on the provided information, outputting strictly in JSON format.
 
-  Output JSON:
-  {
-    "title": "String",
-    "summary": "String (Markdown, >1000 words)",
-    "script": "String (The text only, no cues)"
-  }
+Requirements:
+
+1. **Title**: Create a catchy, click-worthy headline that blends Chinese and English (e.g., "Gelsenkirchen 大劫案...").
+
+2. **Summary (Deep Dive Analysis)**: 
+   - Write a structured, professional analysis in Markdown.
+   - **Constraint**: MUST be at least 1000 words. 
+   - **Expansion Strategy**: Since the source might be concise, you must expand by:
+     - Detailed breakdown of each news event.
+     - Background context (History, geography, or industry standards related to the news).
+     - Potential global or local impact.
+     - Expert perspectives or public reaction (based on the context or logical inference).
+     - Use a professional, journalistic tone.
+
+3. **Podcast Script (The Jaz Monologue)**:
+   - Host: Jaz.
+   - Tone: "The Morning Hype" style (High energy, enthusiastic, witty, and fast-paced).
+   - Language Mix: **70% Chinese, 30% English**. 
+     - Use Chinese for the main narrative and logical flow.
+     - Use English for key terms, headlines, punchlines, or to repeat important points for language learners.
+     - Ensure the transition between languages is smooth and natural (bilingual "Chinglish" style for education).
+   - **Strict Formatting**: The script must be a continuous flow of speech. 
+     - **DO NOT** include markers like "Jaz:", "Introduction:", "[Music]", "01.", or any cues. 
+     - It must be a single block of text ready to be read aloud from start to finish.
+   - Content Flow: Jaz should introduce the news, explain 3-5 key English vocabulary words naturally within the storytelling, provide one or two witty comments after each news item, and wrap up with a "stay hyped" closing.
+
+Output Format (JSON):
+{
+  "title": "...",
+  "summary": "...",
+  "script": "..."
+}
 `;
 
         const scriptResponse = await ai.models.generateContent({
