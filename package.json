@@ -18,6 +18,8 @@
     "@supabase/supabase-js": "^2.76.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^17.2.3",
+    "fast-xml-parser": "^5.3.3",
     "lucide-react": "^0.542.0",
     "next": "15.5.9",
     "next-auth": "^5.0.0-beta.29",
@@ -27,6 +29,7 @@
     "react-markdown": "^9.0.3",
     "tailwind-merge": "^3.3.1",
     "uuid": "^11.0.4",
+    "wav": "^1.0.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
