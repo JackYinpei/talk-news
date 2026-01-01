@@ -302,8 +302,8 @@ ${script}
         // 4. Upload to Supabase (using the memory buffer directly)
         const fileContent = wavBuffer;
         // const dateFolder IS ALREADY DEFINED AT START OF FUNCTION
-        const safeTitle = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 60);
-        const fileName = `${dateFolder}/${category}-${safeTitle}.wav`;
+        // Use UUID for storage filename to prevent "Invalid Key" errors with Chinese characters
+        const fileName = `${dateFolder}/${category}-${tempUuid}.wav`;
 
         const { data: uploadData, error: uploadError } = await supabase
             .storage
