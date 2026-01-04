@@ -116,6 +116,7 @@ export async function POST(req) {
             return NextResponse.json({
                 title: cached.title,
                 summary: cached.summary,
+                script: cached.script,
                 audioUrl: finalAudioUrl,
                 imageUrl: cached.image_url,
                 category: cached.category
@@ -357,6 +358,7 @@ ${script}
         return NextResponse.json({
             title,
             summary,
+            script,
             audioUrl: publicAudioUrl,
             imageUrl,
             category
