@@ -123,6 +123,12 @@ export async function POST(req) {
             });
         }
 
+        // If a specific date was requested and it's not today (UTC), we cannot generate new content
+        // because the RSS feed is live.
+        if (date && date !== todayStr) {
+            return NextResponse.json({ error: "No podcast found for this date" }, { status: 404 });
+        }
+
         // 1. Fetch News
         // Using Kagi RSS proxy as per other routes or direct depending on environment.
         // Using the logic from news/route.js but executing here or fetching locally.
