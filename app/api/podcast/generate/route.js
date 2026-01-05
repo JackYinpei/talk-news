@@ -78,9 +78,10 @@ export const maxDuration = 60;
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { category = 'world' } = body;
+        const { category = 'world', date } = body;
 
-        const dateFolder = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dateFolder = date || todayStr;
 
         // 0. Check Cache
         // We check if we already have a podcast for this category and date
