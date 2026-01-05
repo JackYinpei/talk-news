@@ -1,5 +1,5 @@
 import { getPodcastsByDate } from '@/app/lib/podcastService';
-import PodcastArchiveClient from '@/app/components/PodcastArchiveClient';
+import PodcastSharedClient from '@/app/components/PodcastSharedClient';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata(props) {
@@ -51,6 +51,6 @@ export default async function PodcastDatePage(props) {
     const podcasts = await getPodcastsByDate(date);
 
     return (
-        <PodcastArchiveClient date={date} initialPodcasts={podcasts} />
+        <PodcastSharedClient initialDate={date} initialPodcasts={podcasts} />
     );
 }
