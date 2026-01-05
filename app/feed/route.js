@@ -61,7 +61,7 @@ export async function GET() {
     </itunes:category>
     <itunes:owner>
       <itunes:name>LingDaily</itunes:name>
-      <itunes:email>sliver@linux.do</itunes:email>
+      <itunes:email>slivery@linux.do</itunes:email>
     </itunes:owner>
     <itunes:image href="${imageUrl}" />
     <itunes:explicit>clean</itunes:explicit>
