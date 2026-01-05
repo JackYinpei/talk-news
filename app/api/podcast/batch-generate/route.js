@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { XMLParser } from 'fast-xml-parser';
 import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import { toWavBuffer, cleanDescription, backupAudioToDisk, GENERATION_PROMPTS } from '@/app/lib/podcastGeneratorUtils';
+
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -16,29 +20,7 @@ const CATEGORIES = ['world', 'tech', 'business', 'science', 'sports', 'ai', 'cry
 // 允许长时间运行（Vercel Pro 可用 5 分钟）
 export const maxDuration = 300;
 
-function toWavBuffer(pcmData) {
-    const channels = 1;
-    const sampleRate = 24000;
-    const bitDepth = 16;
-    const dataLength = pcmData.length;
-
-    const buffer = Buffer.alloc(44);
-    buffer.write('RIFF', 0);
-    buffer.writeUInt32LE(36 + dataLength, 4);
-    buffer.write('WAVE', 8);
-    buffer.write('fmt ', 12);
-    buffer.writeUInt32LE(16, 16);
-    buffer.writeUInt16LE(1, 20);
-    buffer.writeUInt16LE(channels, 22);
-    buffer.writeUInt32LE(sampleRate, 24);
-    buffer.writeUInt32LE(sampleRate * channels * (bitDepth / 8), 28);
-    buffer.writeUInt16LE(channels * (bitDepth / 8), 32);
-    buffer.writeUInt16LE(bitDepth, 34);
-    buffer.write('data', 36);
-    buffer.writeUInt32LE(dataLength, 40);
-
-    return Buffer.concat([buffer, pcmData]);
-}
+// Local functions removed in favor of imports from podcastGeneratorUtils
 
 async function generatePodcastForCategory(category, dateFolder) {
     // 检查缓存
@@ -74,15 +56,6 @@ async function generatePodcastForCategory(category, dateFolder) {
         return { category, status: 'no_news' };
     }
 
-    function cleanDescription(html) {
-        if (!html) return '';
-        let clean = html;
-        clean = clean.replace(/<h3>Sources:?<\/h3>[\s\S]*/i, '');
-        clean = clean.replace(/<img[^>]*>/g, '');
-        clean = clean.replace(/<a[^>]*>([^<]+)<\/a>/g, '$1');
-        clean = clean.replace(/<br\s*\/?>/gi, '\n');
-        return clean.trim();
-    }
 
     const newsContext = items.map((item, i) => `
 Item ${i + 1}:
@@ -105,36 +78,7 @@ PubDate: ${item.pubDate || item.published || ''}
     }
 
     // 生成内容
-    const scriptPrompt = `
-Role: You are the Lead Producer for "LingDaily News", a high-end bilingual education podcast.
-
-Context Information:
-${newsContext}
-
-Task:
-Generate a comprehensive news package based on the provided information, outputting strictly in JSON format.
-
-Requirements:
-
-1. **Title**: Create a catchy, click-worthy headline that blends Chinese and English.
-
-2. **Summary (Deep Dive Analysis)**:
-   - Write a structured, professional analysis in Markdown.
-   - **Constraint**: MUST be at least 1000 words.
-   - Expand with detailed breakdown, background context, potential impact, expert perspectives.
-
-3. **Podcast Script (The Jaz Monologue)**:
-   - Host: Jaz. Tone: High energy, enthusiastic, witty.
-   - Language Mix: **70% Chinese, 30% English**.
-   - **Strict Formatting**: Continuous flow of speech, no markers or cues.
-
-Output Format (JSON):
-{
-  "title": "...",
-  "summary": "...",
-  "script": "..."
-}
-`;
+    const scriptPrompt = GENERATION_PROMPTS.script(newsContext);
 
     const scriptResponse = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -147,16 +91,7 @@ Output Format (JSON):
     const { title, summary, script } = generatedData;
 
     // 生成音频
-    const ttsPrompt = `
-# AUDIO PROFILE: Jaz R.
-## "The LingDaily Host"
-
-### DIRECTOR'S NOTES
-Style: Bright, sunny, inviting. Bilingual with natural Chinese and English.
-
-#### TRANSCRIPT
-${script}
-`;
+    const ttsPrompt = GENERATION_PROMPTS.tts(script);
 
     const ttsResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
@@ -179,20 +114,42 @@ ${script}
     const audioBuffer = Buffer.from(audioDataInfo, 'base64');
     const wavBuffer = toWavBuffer(audioBuffer);
 
-    // 上传到 Supabase
+    // Save to tmp (backup)
     const tempUuid = uuidv4();
+    const tempWavPath = path.join('/tmp', `news-${category}-${tempUuid}.wav`);
+    backupAudioToDisk(tempWavPath, wavBuffer);
+
+    // 上传到 Supabase with Retry
     const fileName = `${dateFolder}/${category}-${tempUuid}.wav`;
+    let uploadError = null;
+    let uploadSuccess = false;
 
-    const { error: uploadError } = await supabase
-        .storage
-        .from('podcasts')
-        .upload(fileName, wavBuffer, {
-            contentType: 'audio/wav',
-            upsert: false
-        });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const { error } = await supabase
+                .storage
+                .from('podcasts')
+                .upload(fileName, wavBuffer, {
+                    contentType: 'audio/wav',
+                    upsert: false
+                });
 
-    if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
+            if (!error) {
+                uploadSuccess = true;
+                break;
+            }
+            uploadError = error;
+            console.warn(`Upload attempt ${attempt} failed for ${category}: ${error.message}. Retrying...`);
+        } catch (e) {
+            uploadError = e;
+            console.warn(`Upload attempt ${attempt} failed for ${category}: ${e.message}. Retrying...`);
+        }
+        // Wait 1s before retry
+        await new Promise(r => setTimeout(r, 1000));
+    }
+
+    if (!uploadSuccess) {
+        throw new Error(`Upload failed after 3 attempts: ${uploadError?.message || 'Unknown error'}`);
     }
 
     const { data: signedUrlData } = await supabase
