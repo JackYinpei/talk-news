@@ -22,6 +22,16 @@ function detectPreferredLocale(acceptLanguageHeader = "") {
   return "en";
 }
 
+export const metadata = {
+  title: 'LingDaily - AI English Learning with Daily News Podcasts',
+  description: 'Master English with LingDaily. Chat with AI about current news, listen to daily AI-generated podcasts, and build your vocabulary. Real-time conversations and immersive audio learning.',
+  keywords: 'English learning, AI tutor, daily news podcasts, English conversation, vocabulary building, speaking practice, LingDaily',
+  openGraph: {
+    title: 'LingDaily - Learn English with AI & News Podcasts',
+    description: 'Join LingDaily to practice English through real-time AI conversations and daily news podcasts customized for learners.',
+  }
+};
+
 export default async function Home() {
   let session = null;
   try {
@@ -48,7 +58,7 @@ export default async function Home() {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "LingDaily",
-    "description": "Chat with AI to learn English through current news conversations. AI-powered English learning platform for vocabulary building and speaking practice.",
+    "description": "Chat with AI to learn English through current news conversations and daily AI-generated podcasts. AI-powered English learning platform for vocabulary building, listening, and speaking practice.",
     "url": siteUrl,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
