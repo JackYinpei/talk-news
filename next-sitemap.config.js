@@ -51,7 +51,7 @@ async function fetchPodcastRoutes() {
   }
 
   const params = new URLSearchParams();
-  params.set('select', 'date_folder,updated_at');
+  params.set('select', 'date_folder,created_at');
   params.set('limit', '10000');
 
   try {
@@ -75,8 +75,8 @@ async function fetchPodcastRoutes() {
     if (Array.isArray(rows)) {
       rows.forEach((row) => {
         if (row.date_folder) {
-          if (!entries[row.date_folder] || row.updated_at > entries[row.date_folder]) {
-            entries[row.date_folder] = row.updated_at;
+          if (!entries[row.date_folder] || row.created_at > entries[row.date_folder]) {
+            entries[row.date_folder] = row.created_at;
           }
         }
       });
