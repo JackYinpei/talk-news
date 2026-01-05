@@ -259,7 +259,10 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
             <div className="flex-1 flex flex-col min-h-0 p-4 md:p-8">
                 {/* Header */}
                 <header className="flex-none mb-4 md:mb-8 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                    <div
+                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => router.push('/')}
+                    >
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-tr from-rose-500 to-orange-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
                             <span className="text-white font-bold text-base md:text-lg">P</span>
                         </div>

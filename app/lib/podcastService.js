@@ -7,9 +7,28 @@ const supabase = createClient(
 
 const CATEGORIES = ['world', 'tech', 'business', 'science', 'sports', 'ai', 'crypto', 'gaming'];
 
+// Helper to sign audio URL
+async function signAudioUrl(audioUrl, expiresIn = 31536000) {
+    if (audioUrl && audioUrl.includes('/podcasts/')) {
+        const parts = audioUrl.split('/podcasts/');
+        if (parts.length > 1) {
+            const filePath = parts[1].split('?')[0]; // Remove old signature params
+            const { data: resigned, error: resignError } = await supabase
+                .storage
+                .from('podcasts')
+                .createSignedUrl(filePath, expiresIn);
+
+            if (!resignError && resigned?.signedUrl) {
+                return resigned.signedUrl;
+            }
+        }
+    }
+    return audioUrl;
+}
+
 export async function getPodcastsByDate(date) {
     try {
-        // 获取指定日期的所有 podcast
+        // Get all podcasts for a specific date
         const { data: podcasts, error } = await supabase
             .from('podcasts')
             .select('*')
@@ -20,18 +39,19 @@ export async function getPodcastsByDate(date) {
             throw new Error('Failed to fetch podcasts');
         }
 
-        // 为每个类别构建结果，包含是否存在的标记
-        const result = CATEGORIES.map(category => {
+        // Build result for each category
+        const result = await Promise.all(CATEGORIES.map(async category => {
             const podcast = podcasts?.find(p => p.category === category);
 
             if (podcast) {
+                const signedUrl = await signAudioUrl(podcast.audio_url);
                 return {
                     category,
                     exists: true,
                     title: podcast.title,
                     summary: podcast.summary,
                     script: podcast.script,
-                    audioUrl: podcast.audio_url,
+                    audioUrl: signedUrl,
                     imageUrl: podcast.image_url,
                     createdAt: podcast.created_at
                 };
@@ -41,33 +61,41 @@ export async function getPodcastsByDate(date) {
                     exists: false
                 };
             }
-        });
-
-        // 重新签署音频 URL（确保有效性）
-        for (const item of result) {
-            if (item.exists && item.audioUrl && item.audioUrl.includes('/podcasts/')) {
-                const parts = item.audioUrl.split('/podcasts/');
-                if (parts.length > 1) {
-                    const filePath = parts[1].split('?')[0]; // 移除旧的签名参数
-                    const { data: resigned, error: resignError } = await supabase
-                        .storage
-                        .from('podcasts')
-                        .createSignedUrl(filePath, 31536000); // 1 year
-
-                    if (!resignError && resigned?.signedUrl) {
-                        item.audioUrl = resigned.signedUrl;
-                    }
-                }
-            }
-        }
+        }));
 
         return result;
 
     } catch (err) {
         console.error('getPodcastsByDate Error:', err);
-        // Return empty structure or rethrow depending on needs. 
-        // For safe rendering, returning the structure with exists:false might be safer if DB fails, 
-        // but let's throw so the caller knows.
         throw err;
+    }
+}
+
+export async function getRecentPodcasts(limit = 50) {
+    try {
+        const { data: podcasts, error } = await supabase
+            .from('podcasts')
+            .select('title, summary, date_folder, category, audio_url, created_at')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Database query error details:', JSON.stringify(error, null, 2));
+            throw new Error(`Failed to fetch recent podcasts: ${error.message || JSON.stringify(error)}`);
+        }
+
+        // Process and sign URLs
+        const result = await Promise.all(podcasts.map(async p => {
+            const signedUrl = await signAudioUrl(p.audio_url);
+            return {
+                ...p,
+                audioUrl: signedUrl
+            };
+        }));
+
+        return result;
+    } catch (err) {
+        console.error('getRecentPodcasts Error:', err);
+        return [];
     }
 }
