@@ -240,8 +240,26 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
     };
 
     const handleEnded = () => {
-        setIsPlaying(false);
-        setProgress(0);
+        const currentIndex = CATEGORIES.indexOf(playingCategory);
+        let nextCategory = null;
+
+        // Find the next category that has a podcast
+        for (let i = currentIndex + 1; i < CATEGORIES.length; i++) {
+            const cat = CATEGORIES[i];
+            const podcast = podcasts.find(p => p.category === cat);
+            if (podcast && podcast.exists && podcast.audioUrl) {
+                nextCategory = cat;
+                break;
+            }
+        }
+
+        if (nextCategory) {
+            setSelectedCategory(nextCategory);
+            playCategory(nextCategory);
+        } else {
+            setIsPlaying(false);
+            setProgress(0);
+        }
     };
 
     const handleSeek = (e) => {
@@ -312,12 +330,7 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
 
                     {/* 类别卡片列表 - 小屏幕横向滚动 (固定高度)，大屏幕纵向列表 (满高) */}
                     <div className="flex-none lg:col-span-3 lg:h-full lg:overflow-hidden order-first">
-                        <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto pb-2 lg:pb-0 lg:pr-2 custom-scrollbar"
-                            style={{
-                                scrollbarWidth: 'none',
-                                msOverflowStyle: 'none'
-                            }}
-                        >
+                        <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:h-full pb-2 lg:pb-0 lg:pr-2 custom-scrollbar">
                             {loading ? (
                                 <div className="flex lg:flex-col items-center justify-center h-20 lg:h-40 w-full">
                                     <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin text-rose-500" />
