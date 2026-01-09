@@ -24,7 +24,7 @@ export default function SignInClient({ googleEnabled }) {
   const handleGoogleSignIn = () => {
     if (!googleEnabled) return
     startTransition(() => {
-      void signIn("google", { callbackUrl: "/talk" })
+      void signIn("google", { callbackUrl: "/" })
     })
   }
 
@@ -41,7 +41,7 @@ export default function SignInClient({ googleEnabled }) {
         setError(res.error === "CredentialsSignin" ? "Invalid email or password (or email not confirmed)." : res.error)
         return
       }
-      window.location.assign("/talk")
+      window.location.assign("/")
     })
   }
 

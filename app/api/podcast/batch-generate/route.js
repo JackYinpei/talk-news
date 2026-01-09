@@ -7,18 +7,8 @@ const CATEGORIES = ['world', 'tech', 'business', 'science', 'sports', 'ai', 'cry
 export const maxDuration = 300;
 
 export async function POST(req) {
-    // 验证请求来源
-    const authHeader = req.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // 允许 Vercel Cron 或带有正确 secret 的请求
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
-        const body = await req.json().catch(() => ({}));
-        const dateFolder = body.date || new Date().toISOString().split('T')[0];
+        const dateFolder = new Date().toISOString().split('T')[0];
 
         const results = [];
         const errors = [];
