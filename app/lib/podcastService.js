@@ -52,6 +52,8 @@ export async function getPodcastsByDate(date) {
                     summary: podcast.summary,
                     script: podcast.script,
                     audioUrl: signedUrl,
+                    audioBytes: podcast.audio_bytes ?? null,
+                    audioDurationSeconds: podcast.audio_duration_seconds ?? null,
                     imageUrl: podcast.image_url,
                     createdAt: podcast.created_at
                 };
@@ -75,7 +77,7 @@ export async function getRecentPodcasts(limit = 50) {
     try {
         const { data: podcasts, error } = await supabase
             .from('podcasts')
-            .select('title, summary, date_folder, category, audio_url, created_at')
+            .select('title, summary, date_folder, category, audio_url, created_at, audio_bytes, audio_duration_seconds')
             .order('created_at', { ascending: false })
             .limit(limit);
 
@@ -89,7 +91,9 @@ export async function getRecentPodcasts(limit = 50) {
             const signedUrl = await signAudioUrl(p.audio_url);
             return {
                 ...p,
-                audioUrl: signedUrl
+                audioUrl: signedUrl,
+                audioBytes: p.audio_bytes ?? null,
+                audioDurationSeconds: p.audio_duration_seconds ?? null
             };
         }));
 

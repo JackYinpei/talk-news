@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
-import { toWavBuffer, cleanDescription, backupAudioToDisk, GENERATION_PROMPTS } from '@/app/lib/podcastGeneratorUtils';
+import { toWavBuffer, cleanDescription, backupAudioToDisk, GENERATION_PROMPTS, getPcmDurationSeconds } from '@/app/lib/podcastGeneratorUtils';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -72,7 +72,9 @@ export async function POST(req) {
                 script: cached.script,
                 audioUrl: finalAudioUrl,
                 imageUrl: cached.image_url,
-                category: cached.category
+                category: cached.category,
+                audioBytes: cached.audio_bytes ?? null,
+                audioDurationSeconds: cached.audio_duration_seconds ?? null
             });
         }
 
@@ -191,6 +193,8 @@ export async function POST(req) {
 
         // Convert PCM to WAV in memory
         const wavBuffer = toWavBuffer(audioBuffer);
+        const audioBytes = wavBuffer.length;
+        const audioDurationSeconds = Math.round(getPcmDurationSeconds(audioBuffer.length));
 
         // Start async backup to disk (fire and forget, no await)
         backupAudioToDisk(tempWavPath, wavBuffer);
@@ -242,6 +246,8 @@ export async function POST(req) {
             script,
             image_url: imageUrl,
             audio_url: publicAudioUrl,
+            audio_bytes: audioBytes,
+            audio_duration_seconds: audioDurationSeconds,
             date_folder: dateFolder
         });
 
@@ -256,7 +262,9 @@ export async function POST(req) {
             script,
             audioUrl: publicAudioUrl,
             imageUrl,
-            category
+            category,
+            audioBytes,
+            audioDurationSeconds
         });
 
     } catch (err) {

@@ -30,6 +30,8 @@ const CATEGORY_COLORS = {
     gaming: 'from-pink-500 to-rose-500'
 };
 
+const PODCAST_CDN_BASE_URL = process.env.NEXT_PUBLIC_PODCAST_CDN_BASE_URL || 'https://podcast.shiying.sh.cn';
+
 // 生成最近 7 天的日期选项
 function getLast7Days() {
     const days = [];
@@ -53,6 +55,19 @@ function getLast7Days() {
     }
 
     return days;
+}
+
+function applyCdnBase(audioUrl) {
+    if (!audioUrl) return '';
+    try {
+        const url = new URL(audioUrl);
+        const cdnBase = new URL(PODCAST_CDN_BASE_URL);
+        url.protocol = cdnBase.protocol;
+        url.host = cdnBase.host;
+        return url.toString();
+    } catch (err) {
+        return audioUrl;
+    }
 }
 
 export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
@@ -205,6 +220,7 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
     // 如果没有正在播放的，默认用第一个有数据的
     const firstAvailablePodcast = podcasts.find(p => p.exists);
     const activePodcast = playingPodcast || firstAvailablePodcast;
+    const activeAudioUrl = activePodcast?.audioUrl ? applyCdnBase(activePodcast.audioUrl) : '';
 
     // 播放指定类别
     const playCategory = (category) => {
@@ -219,7 +235,7 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
     };
 
     const togglePlay = () => {
-        if (!audioRef.current || !activePodcast?.audioUrl) return;
+        if (!audioRef.current || !activeAudioUrl) return;
         if (isPlaying) {
             audioRef.current.pause();
         } else {
@@ -505,11 +521,11 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
             </div>
 
             {/* 音频播放器 - Flex item at the bottom */}
-            {activePodcast?.audioUrl && (
+            {activeAudioUrl && (
                 <div className="flex-none h-24 bg-neutral-950 border-t border-neutral-800 p-4 flex items-center gap-4 z-50 w-full relative">
                     <audio
                         ref={audioRef}
-                        src={activePodcast.audioUrl}
+                        src={activeAudioUrl}
                         onTimeUpdate={handleTimeUpdate}
                         onEnded={handleEnded}
                     />

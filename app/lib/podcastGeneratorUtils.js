@@ -1,10 +1,14 @@
 
 import fs from 'fs';
 
+const PCM_CHANNELS = 1;
+const PCM_SAMPLE_RATE = 24000;
+const PCM_BIT_DEPTH = 16;
+
 export function toWavBuffer(pcmData) {
-    const channels = 1;
-    const sampleRate = 24000;
-    const bitDepth = 16;
+    const channels = PCM_CHANNELS;
+    const sampleRate = PCM_SAMPLE_RATE;
+    const bitDepth = PCM_BIT_DEPTH;
     const dataLength = pcmData.length;
 
     const buffer = Buffer.alloc(44);
@@ -23,6 +27,12 @@ export function toWavBuffer(pcmData) {
     buffer.writeUInt32LE(dataLength, 40);
 
     return Buffer.concat([buffer, pcmData]);
+}
+
+export function getPcmDurationSeconds(pcmByteLength) {
+    const bytesPerSecond = PCM_SAMPLE_RATE * PCM_CHANNELS * (PCM_BIT_DEPTH / 8);
+    if (!bytesPerSecond) return 0;
+    return pcmByteLength / bytesPerSecond;
 }
 
 export function cleanDescription(html) {
