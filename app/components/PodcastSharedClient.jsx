@@ -236,6 +236,9 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
 
     const togglePlay = () => {
         if (!audioRef.current || !activeAudioUrl) return;
+        if (!playingCategory && activePodcast?.category) {
+            setPlayingCategory(activePodcast.category);
+        }
         if (isPlaying) {
             audioRef.current.pause();
         } else {
@@ -256,7 +259,8 @@ export default function PodcastSharedClient({ initialDate, initialPodcasts }) {
     };
 
     const handleEnded = () => {
-        const currentIndex = CATEGORIES.indexOf(playingCategory);
+        const currentCategory = playingCategory || activePodcast?.category;
+        const currentIndex = currentCategory ? CATEGORIES.indexOf(currentCategory) : -1;
         let nextCategory = null;
 
         // Find the next category that has a podcast
