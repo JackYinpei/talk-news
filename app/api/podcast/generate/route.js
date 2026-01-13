@@ -1,274 +1,227 @@
-
-import { GoogleGenAI } from '@google/genai';
-import { createClient } from '@supabase/supabase-js';
-import { XMLParser } from 'fast-xml-parser';
-
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
-import { toWavBuffer, cleanDescription, backupAudioToDisk, GENERATION_PROMPTS, getPcmDurationSeconds } from '@/app/lib/podcastGeneratorUtils';
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+import {
+    initClients,
+    fetchAllNews,
+    generateContentWithGemini,
+    generateAudioElevenLabs,
+    generateAudioGemini,
+    uploadToR2,
+    estimateDuration
+} from '@/app/lib/podcastWorkflow';
 
+// Configuration
+const CATEGORIES = ['world', 'tech', 'business', 'science', 'ai', 'crypto', 'gaming'];
+export const maxDuration = 300;
+
+// Initialize Clients
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Initialize Gemini
-// Note: User provided empty constructor in snippet, but likely needs apiKey if not in env automatically?
-// Usually it picks up GOOGLE_API_KEY or GEMINI_API_KEY. I'll pass it explicitly to be safe if I can find it, 
-// or assume the SDK handles process.env.GEMINI_API_KEY if passed in constructor.
-// Based on snippet: const ai = new GoogleGenAI({}); 
-// I will check if I need to pass key. Usually: new GoogleGenAI({ apiKey: ... })
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// We init AI and S3 inside the helper or pass them in. 
+// The helper `initClients` is available if we need to pass instances explicitly, 
+// but the functions default to creating new ones if not passed. 
+// For route handlers, it's fine to let them init or we can init once here.
+const { ai, s3Client, elevenLabs } = initClients();
 
-// Local helpers removed in favor of imports from podcastGeneratorUtils
-
-// Allow longer timeout for this generation
-export const maxDuration = 60;
-
-export async function POST(req) {
+/**
+ * ENTRY POINT
+ */
+export async function GET(req) {
     try {
-        const body = await req.json();
-        const { category = 'world', date } = body;
+        const { searchParams } = new URL(req.url);
+        const date = searchParams.get('date');
+        const force = searchParams.get('force') === 'true';
 
         const todayStr = new Date().toISOString().split('T')[0];
         const dateFolder = date || todayStr;
 
-        // 0. Check Cache
-        // We check if we already have a podcast for this category and date
-        const { data: cachedPodcasts, error: cacheError } = await supabase
-            .from('podcasts')
-            .select('*')
-            .eq('category', category)
-            .eq('date_folder', dateFolder)
-            .limit(1);
-
-        if (cachedPodcasts && cachedPodcasts.length > 0) {
-            console.log("Serving from cache");
-            const cached = cachedPodcasts[0];
-
-            let finalAudioUrl = cached.audio_url;
-            // If the URL is a public one (no token) or we want to ensure freshness for private bucket:
-            // Attempt to re-sign it.
-            if (cached.audio_url && cached.audio_url.includes('/podcasts/')) {
-                const parts = cached.audio_url.split('/podcasts/');
-                if (parts.length > 1) {
-                    const filePath = parts[1]; // e.g. "2026-01-01/fname.wav"
-                    const { data: resigned, error: resignError } = await supabase
-                        .storage
-                        .from('podcasts')
-                        .createSignedUrl(filePath, 31536000); // 1 year
-
-                    if (!resignError && resigned?.signedUrl) {
-                        finalAudioUrl = resigned.signedUrl;
-                    }
-                }
+        // 1. Check if already running or completed
+        const status = await checkStatus(dateFolder, 'daily_digest');
+        if (status && !force) {
+            if (status.status === 'in_progress') {
+                return NextResponse.json({ status: 'in_progress', message: 'Generation already in progress.' });
             }
-
-            return NextResponse.json({
-                title: cached.title,
-                summary: cached.summary,
-                script: cached.script,
-                audioUrl: finalAudioUrl,
-                imageUrl: cached.image_url,
-                category: cached.category,
-                audioBytes: cached.audio_bytes ?? null,
-                audioDurationSeconds: cached.audio_duration_seconds ?? null
-            });
-        }
-
-        // If a specific date was requested and it's not today (UTC), we cannot generate new content
-        // because the RSS feed is live.
-        if (date && date !== todayStr) {
-            return NextResponse.json({ error: "No podcast found for this date" }, { status: 404 });
-        }
-
-        // 1. Fetch News
-        // Using Kagi RSS proxy as per other routes or direct depending on environment.
-        // Using the logic from news/route.js but executing here or fetching locally.
-        // Since fetch to localhost might be flaky in build, we redo the fetch logic.
-        const newsUrl = `https://news.kagi.com/${category}.xml`;
-        const feedRes = await fetch(newsUrl, {
-            headers: { 'User-Agent': 'LingDaily/1.0 (+https://talknews.ai)' }
-        });
-
-        if (!feedRes.ok) throw new Error('Failed to fetch news');
-
-        const feedText = await feedRes.text();
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
-        const feed = parser.parse(feedText);
-        // Handle RSS structure variations safely
-        const channel = feed.rss?.channel || feed.feed;
-        const itemsRaw = channel?.item || channel?.entry || [];
-        const items = Array.isArray(itemsRaw) ? itemsRaw.slice(0, 5) : [itemsRaw].slice(0, 1);
-
-        if (items.length === 0) {
-            return NextResponse.json({ error: "No items found" }, { status: 404 });
-        }
-
-
-
-        const newsContext = items.map((item, i) => `
-  Item ${i + 1}:
-  Title: ${item.title}
-  Description: ${cleanDescription(item.description || item.summary || '')}
-  PubDate: ${item.pubDate || item.published || ''}
-`).join('\n\n');
-
-        // Extract image
-        // Try to find an image in the items (fallback to next if first fails)
-        let imageUrl = '/placeholder.jpg';
-
-        for (const item of items) {
-            const desc = item.description || '';
-            // Match src='...' or src="..."
-            const imgMatch = desc.match(/src=["']([^"']+)["']/);
-
-            if (imgMatch) {
-                imageUrl = imgMatch[1];
-                break;
-            } else if (item['media:content'] && item['media:content']['@_url']) {
-                imageUrl = item['media:content']['@_url'];
-                break;
+            if (status.status === 'completed') {
+                return NextResponse.json({ status: 'completed', data: status });
             }
         }
 
-        // 2. Generate Content (Title, Summary, Script)
-        // We use a separate call for text generation
-        const scriptPrompt = GENERATION_PROMPTS.script(newsContext);
+        // 2. Lock / Check Resume
+        // If status is 'script_generated' and not force, we can resume.
+        // If status is 'failed', we can retry.
+        // If 'in_progress', we block unless force.
 
-        const scriptResponse = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: [{ parts: [{ text: scriptPrompt }] }],
-            config: {
-                responseMimeType: "application/json"
+        let existingState = null;
+        if (status) {
+            if (status.status === 'in_progress' && !force) {
+                return NextResponse.json({ status: 'in_progress', message: 'Generation already in progress.' });
             }
-        });
-
-        const scriptJsonStr = scriptResponse.candidates?.[0]?.content?.parts?.[0]?.text;
-        let generatedData;
-        try {
-            generatedData = JSON.parse(scriptJsonStr);
-        } catch (e) {
-            console.error("Failed to parse JSON", scriptJsonStr);
-            throw new Error("AI response format error");
+            if (status.status === 'completed' && !force) {
+                return NextResponse.json({ status: 'completed', data: status });
+            }
+            if ((status.status === 'script_generated' || (status.status === 'failed' && status.content)) && !force) {
+                existingState = status;
+                console.log("Resuming from saved state...");
+            }
         }
 
-        const { title, summary, script } = generatedData;
+        // Update status to in_progress (if not resuming, or even if resuming to show activity)
+        await setStatus(dateFolder, 'daily_digest', 'in_progress');
 
-        // 3. Generate Audio
-        console.log("Generating Audio for script length:", script.length, "now generate audio");
+        // 3. Execution Pipeline
+        const result = await runGenerationPipeline(dateFolder, existingState);
 
-        // Construct the advanced prompt for TTS
-        const ttsPrompt = GENERATION_PROMPTS.tts(script);
+        // 4. Update Success
+        await updateResult(dateFolder, 'daily_digest', result);
 
-        const ttsResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text: ttsPrompt }] }],
-            config: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' },
-                    },
-                },
-            },
-        });
+        return NextResponse.json({ status: 'success', data: result });
 
-        const audioDataInfo = ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!audioDataInfo) {
-            throw new Error("No audio data generated");
-        }
+    } catch (error) {
+        console.error("Pipeline Error:", error);
 
-        const audioBuffer = Buffer.from(audioDataInfo, 'base64');
-        console.log("Audio Buffer Size:", audioBuffer.length);
+        // Try to unlock or set failed
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dateFolder = new URL(req.url).searchParams.get('date') || todayStr;
+        await setStatus(dateFolder, 'daily_digest', 'failed', error.message);
 
-        if (audioBuffer.length === 0) {
-            throw new Error("Audio buffer is empty");
-        }
-
-        const tempUuid = uuidv4();
-        const tempWavPath = path.join('/tmp', `news-${tempUuid}.wav`);
-
-        // Convert PCM to WAV in memory
-        const wavBuffer = toWavBuffer(audioBuffer);
-        const audioBytes = wavBuffer.length;
-        const audioDurationSeconds = Math.round(getPcmDurationSeconds(audioBuffer.length));
-
-        // Start async backup to disk (fire and forget, no await)
-        backupAudioToDisk(tempWavPath, wavBuffer);
-
-        // 4. Upload to Supabase (using the memory buffer directly)
-        const fileContent = wavBuffer;
-        // const dateFolder IS ALREADY DEFINED AT START OF FUNCTION
-        // Use UUID for storage filename to prevent "Invalid Key" errors with Chinese characters
-        const fileName = `${dateFolder}/${category}-${tempUuid}.wav`;
-
-        const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from('podcasts')
-            .upload(fileName, fileContent, {
-                contentType: 'audio/wav',
-                upsert: false
-            });
-
-        if (uploadError) {
-            console.error("Supabase Upload Error:", uploadError);
-            throw new Error("Failed to upload audio");
-        }
-
-        console.log("Audio uploaded successfully");
-
-        // Get Signed URL (valid for 1 year) since bucket might be private
-        // Supabase signed URLs are necessary if the bucket is not public.
-        const { data: signedUrlData, error: signError } = await supabase
-            .storage
-            .from('podcasts')
-            .createSignedUrl(fileName, 31536000); // 1 year
-
-        if (signError) {
-            console.error("Signed URL Generation Error:", signError);
-        }
-
-        const publicAudioUrl = signedUrlData?.signedUrl || "";
-
-        // Cleanup
-        // Backup file is kept for debugging/backup purposes
-        // as requested by user.
-        // fs.unlinkSync(tempWavPath);
-
-        // 5. Save to Database
-        const { error: dbError } = await supabase.from('podcasts').insert({
-            category,
-            title,
-            summary,
-            script,
-            image_url: imageUrl,
-            audio_url: publicAudioUrl,
-            audio_bytes: audioBytes,
-            audio_duration_seconds: audioDurationSeconds,
-            date_folder: dateFolder
-        });
-
-        if (dbError) {
-            console.error("Database Insert Error:", dbError);
-            // We don't fail the request if DB insert fails, just log it, as user gets the data anyway
-        }
-
-        return NextResponse.json({
-            title,
-            summary,
-            script,
-            audioUrl: publicAudioUrl,
-            imageUrl,
-            category,
-            audioBytes,
-            audioDurationSeconds
-        });
-
-    } catch (err) {
-        console.error("API Error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
+}
+
+/**
+ * PIPELINE ORCHESTRATOR
+ */
+async function runGenerationPipeline(dateFolder, existingState = null) {
+    let content;
+
+    // STEP A & B: News & Script
+    // If we have existing state with content, use it.
+    if (existingState && existingState.content && existingState.script) {
+        console.log(">>> [RESUME MODE] Skipping News Fetch & Script Generation.");
+        console.log(`>>> Loaded script from DB (Length: ${existingState.script.length})`);
+
+        content = {
+            items: existingState.content,
+            fullScript: existingState.script,
+            title: existingState.title,
+            summary: existingState.summary,
+            allImages: existingState.image_url || []
+        };
+    } else {
+        console.log(">>> [FRESH MODE] Starting fresh news fetch and script generation...");
+        // A. Fetch all news
+        const newsData = await fetchAllNews(CATEGORIES);
+
+        // B. Generate Content (Script + Structure)
+        content = await generateContentWithGemini(newsData, ai);
+
+        // CHECKPOINT: Save script to DB immediately
+        await setStatus(dateFolder, 'daily_digest', 'script_generated', null, content);
+        console.log(">>> Checkpoint: Script saved to DB.");
+    }
+
+    // C. Generate Audio (Gemini or ElevenLabs)
+    let audioBuffer;
+    let contentType = 'audio/mpeg';
+    let fileExtension = 'mp3';
+
+    const ttsProvider = (process.env.TTS_PROVIDER || 'elevenlabs').toLowerCase(); // Default to ElevenLabs
+
+    console.log(`>>> Starting Audio Generation using Provider: ${ttsProvider}...`);
+
+    try {
+        if (ttsProvider === 'gemini') {
+            audioBuffer = await generateAudioGemini(content.fullScript, ai);
+            contentType = 'audio/wav';
+            fileExtension = 'wav';
+        } else {
+            audioBuffer = await generateAudioElevenLabs(content.fullScript, elevenLabs);
+            // Default is mp3, already set
+        }
+        console.log(`>>> Audio Generation Successful. Size: ${audioBuffer.length} bytes.`);
+    } catch (err) {
+        console.error(">>> Audio Generation Failed:", err);
+        // If audio fails, we re-throw, but the outer loop will mark as failed.
+        // Importantly, the script is already saved in 'script_generated' state (if we hit that checkpoint),
+        // or effectively by the setStatus above. 
+        // When the user retries, it will pick up the script.
+        throw new Error(`Audio Generation Failed: ${err.message}`);
+    }
+
+    // D. Upload to R2
+    const fileName = `${dateFolder}/daily_digest_${uuidv4()}.${fileExtension}`;
+
+    // Pass s3Client and contentType
+    const audioUrl = await uploadToR2(fileName, audioBuffer, s3Client, contentType);
+    console.log(">>> Audio Uploaded to R2:", audioUrl);
+
+    // E. Return structured data for DB
+    return {
+        ...content, // title, summary, script, images
+        audioUrl,
+        audioBytes: audioBuffer.length,
+        audioDuration: estimateDuration(audioBuffer.length)
+    };
+}
+
+/**
+ * DB HELPERS
+ */
+async function checkStatus(dateFolder, category) {
+    const { data } = await supabase
+        .from('podcasts')
+        .select('*')
+        .eq('date_folder', dateFolder)
+        .eq('category', category)
+        .maybeSingle();
+    return data;
+}
+
+async function setStatus(dateFolder, category, status, errorMessage = null, contentData = null) {
+    const existing = await checkStatus(dateFolder, category);
+
+    const payload = {
+        category,
+        date_folder: dateFolder,
+        status,
+        updated_at: new Date().toISOString(),
+        error_message: errorMessage,
+
+        // Preserve existing or update
+        title: contentData?.title || existing?.title || 'Generative Podcast',
+        summary: contentData?.summary || existing?.summary || 'Generating...',
+        script: contentData?.fullScript || existing?.script || '',
+        image_url: contentData?.allImages || existing?.image_url || [],
+        content: contentData?.items || existing?.content || null
+    };
+
+    const { error } = await supabase
+        .from('podcasts')
+        .upsert(payload, { onConflict: 'category, date_folder' });
+
+    if (error) throw new Error(`DB Error: ${error.message}`);
+}
+
+async function updateResult(dateFolder, category, result) {
+    const { error } = await supabase
+        .from('podcasts')
+        .update({
+            status: 'completed',
+            title: result.title,
+            summary: result.summary,
+            script: result.fullScript,
+            content: result.items,
+            image_url: result.allImages,
+            audio_url: result.audioUrl,
+            audio_bytes: result.audioBytes,
+            audio_duration_seconds: result.audioDuration
+        })
+        .eq('category', category)
+        .eq('date_folder', dateFolder);
+
+    if (error) throw new Error(`DB Update Error: ${error.message}`);
 }

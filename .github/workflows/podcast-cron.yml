@@ -12,6 +12,6 @@ jobs:
     steps:
       - name: Trigger podcast generation
         run: |
-          curl -X POST "${{ secrets.APP_URL }}/api/podcast/batch-generate" \
+          curl "${{ secrets.APP_URL }}/api/podcast/generate" \
             --max-time 600 \
             -H "Content-Type: application/json"

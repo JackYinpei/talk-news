@@ -60,7 +60,7 @@ async function getEnclosureLength(audioUrl) {
 }
 
 export async function GET() {
-    const podcasts = await getRecentPodcasts(100);
+    const podcasts = await getRecentPodcasts(100, 'all');
     const imageUrl = `${SITE_URL}/podcasts/icon.png`;
 
     const itemsXml = (await Promise.all(podcasts.map(async episode => {
