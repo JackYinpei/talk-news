@@ -135,9 +135,15 @@ async function runGenerationPipeline(dateFolder, existingState = null) {
 
     try {
         if (ttsProvider === 'gemini') {
-            audioBuffer = await generateAudioGemini(content.fullScript, ai);
+            const audioResult = await generateAudioGemini(content.fullScript, ai);
+            audioBuffer = audioResult.buffer;
             contentType = 'audio/wav';
             fileExtension = 'wav';
+            if (!audioResult.isComplete) {
+                console.warn(">>> WARNING: Gemini TTS Stream was interrupted. Saving partial audio.");
+                console.log(">>> Full Script that was attempted:");
+                console.log(content.fullScript);
+            }
         } else {
             audioBuffer = await generateAudioElevenLabs(content.fullScript, elevenLabs);
             // Default is mp3, already set

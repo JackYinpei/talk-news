@@ -177,32 +177,145 @@ OUTPUT FORMAT (JSON ARRAY):
  * STEP 3a: GEMINI AUDIO
  */
 export async function generateAudioGemini(text, aiClient) {
-    if (!aiClient) aiClient = initClients().ai;
+    if (!aiClient) {
+        aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
 
-    // Gemini TTS has a 4000 character limit per request usually, but let's check the docs/limits.
-    // The user docs say "context window limit of 32k tokens". So likely fine for 3000-5000 words? 
-    // 5000 chars is well within 32k tokens.
-    // However, for safety and better control, we might want to split if it's huge, 
-    // but let's try single request first as per user example.
-
-    const response = await aiClient.models.generateContent({
-        model: "gemini-2.5-pro-preview-tts",
-        contents: [{ parts: [{ text: text }] }],
-        config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-                voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName: 'Kore' } // 'Kore' -- Firm, good for news? Or 'Charon' -- Informative. Let's stick to user example 'Kore' or maybe 'Puck' (Upbeat). 'Kore' is fine.
+    const config = {
+        temperature: 1,
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+            voiceConfig: {
+                prebuiltVoiceConfig: {
+                    voiceName: 'Kore',
                 }
             }
+        },
+    };
+    const model = 'gemini-2.5-pro-preview-tts';
+    const contents = [
+        {
+            role: 'user',
+            parts: [{ text: text }],
+        },
+    ];
+
+    let accumulatedRawData = [];
+    let streamEnded = false;
+    let mimeType = ''; // Will capture from first chunk
+
+    console.log(">>> Starting Gemini TTS Stream...");
+
+    try {
+        const response = await aiClient.models.generateContentStream({
+            model,
+            config,
+            contents,
+        });
+
+        for await (const chunk of response) {
+            if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+                const inlineData = chunk.candidates[0].content.parts[0].inlineData;
+                if (!mimeType && inlineData.mimeType) {
+                    mimeType = inlineData.mimeType;
+                }
+                const chunkBuffer = Buffer.from(inlineData.data || '', 'base64');
+                accumulatedRawData.push(chunkBuffer);
+            } else {
+                // If text is returned (unlikely with AUDIO modality only, but possible on error/finish)
+                if (chunk.text) console.log("Gemini Stream Text:", chunk.text);
+            }
         }
-    });
+        streamEnded = true;
+    } catch (e) {
+        console.error("Gemini TTS Stream Interrupted:", e);
+        // We continue to process whatever audio we captured
+    }
 
-    const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!data) throw new Error("Gemini TTS returned no audio data");
+    if (accumulatedRawData.length === 0) {
+        throw new Error("Gemini TTS returned no audio data (Stream failed completely)");
+    }
 
-    const pcmBuffer = Buffer.from(data, 'base64');
-    return addWavHeader(pcmBuffer);
+    const fullRawBuffer = Buffer.concat(accumulatedRawData);
+
+    // Convert to WAV with proper header
+    // If we didn't get a mimeType, default to 'audio/pcm; rate=24000' usually
+    /* 
+       Gemini usually returns "audio/pcm; rate=24000" or similar.
+       We use the provided helpers to parse and add header.
+    */
+    const finalBuffer = convertToWav(fullRawBuffer, mimeType || 'audio/pcm; rate=24000');
+
+    return {
+        buffer: finalBuffer,
+        isComplete: streamEnded,
+        totalBytes: finalBuffer.length
+    };
+}
+
+// --- Helpers for WAV Conversion (Reference from User) ---
+
+function convertToWav(rawBuffer, mimeType) {
+    const options = parseMimeType(mimeType);
+    const wavHeader = createWavHeader(rawBuffer.length, options);
+    return Buffer.concat([wavHeader, rawBuffer]);
+}
+
+function parseMimeType(mimeType) {
+    // Format usually: "audio/pcm; rate=24000" or similar
+    const [fileType, ...params] = mimeType.split(';').map(s => s.trim());
+    const [_, format] = fileType.split('/');
+
+    const options = {
+        numChannels: 1,
+        sampleRate: 24000, // Default fallback
+        bitsPerSample: 16  // Default fallback
+    };
+
+    if (format && format.startsWith('L')) {
+        const bits = parseInt(format.slice(1), 10);
+        if (!isNaN(bits)) {
+            options.bitsPerSample = bits;
+        }
+    }
+
+    // Parse params like "rate=24000"
+    for (const param of params) {
+        const [key, value] = param.split('=').map(s => s.trim());
+        if (key === 'rate') {
+            options.sampleRate = parseInt(value, 10);
+        }
+    }
+
+    return options;
+}
+
+function createWavHeader(dataLength, options) {
+    const {
+        numChannels,
+        sampleRate,
+        bitsPerSample,
+    } = options;
+
+    const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+    const blockAlign = numChannels * bitsPerSample / 8;
+    const buffer = Buffer.alloc(44);
+
+    buffer.write('RIFF', 0);                      // ChunkID
+    buffer.writeUInt32LE(36 + dataLength, 4);     // ChunkSize
+    buffer.write('WAVE', 8);                      // Format
+    buffer.write('fmt ', 12);                     // Subchunk1ID
+    buffer.writeUInt32LE(16, 16);                 // Subchunk1Size (PCM)
+    buffer.writeUInt16LE(1, 20);                  // AudioFormat (1 = PCM)
+    buffer.writeUInt16LE(numChannels, 22);        // NumChannels
+    buffer.writeUInt32LE(sampleRate, 24);         // SampleRate
+    buffer.writeUInt32LE(byteRate, 28);           // ByteRate
+    buffer.writeUInt16LE(blockAlign, 32);         // BlockAlign
+    buffer.writeUInt16LE(bitsPerSample, 34);      // BitsPerSample
+    buffer.write('data', 36);                     // Subchunk2ID
+    buffer.writeUInt32LE(dataLength, 40);         // Subchunk2Size
+
+    return buffer;
 }
 
 /**

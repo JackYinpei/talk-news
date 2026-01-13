@@ -24,6 +24,7 @@
     "dotenv": "^17.2.3",
     "fast-xml-parser": "^5.3.3",
     "lucide-react": "^0.542.0",
+    "mime": "^4.1.0",
     "next": "15.5.9",
     "next-auth": "^5.0.0-beta.29",
     "next-sitemap": "^4.2.3",
