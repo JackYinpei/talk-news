@@ -64,17 +64,23 @@ export async function GET() {
     const imageUrl = `${SITE_URL}/podcasts/icon.png`;
 
     const itemsXml = (await Promise.all(podcasts.map(async episode => {
+        const audioUrlRaw = episode.audio_url || episode.audioUrl || '';
+        if (!audioUrlRaw) return '';
+
         const title = escapeXml(episode.title || `${episode.date_folder} - ${episode.category}`);
         // Summary might be Markdown, but RSS description is usually simple text or HTML. 
         // For simplicity and compatibility, we'll treat it as text. 
         // If it contains markdown/HTML, CDATA might be preferred, but escapeXml is safer for broad compatibility if simple.
         const description = escapeXml(episode.summary || '');
         const url = `${SITE_URL}/podcasts/${episode.date_folder}`;
-        if (!episode.audioUrl) return '';
-        const cdnAudioUrl = applyCdnBase(episode.audioUrl);
+        const cdnAudioUrl = applyCdnBase(audioUrlRaw);
         const audioUrl = escapeXml(cdnAudioUrl);
-        const enclosureLength = normalizeEnclosureLength(episode.audioBytes) || await getEnclosureLength(cdnAudioUrl);
-        const itunesDuration = formatItunesDuration(episode.audioDurationSeconds);
+        const enclosureLength = normalizeEnclosureLength(
+            episode.audio_bytes ?? episode.audioBytes
+        ) || await getEnclosureLength(cdnAudioUrl);
+        const itunesDuration = formatItunesDuration(
+            episode.audio_duration_seconds ?? episode.audioDurationSeconds
+        );
         const pubDate = new Date(episode.created_at).toUTCString();
         // GUID is critical for podcast clients to know if it's new.
         const guid = `${episode.date_folder}-${episode.category}`;

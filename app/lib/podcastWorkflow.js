@@ -1,6 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { XMLParser } from 'fast-xml-parser';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import fs from 'fs/promises';
+import path from 'path';
 
 // Re-usable client init
 export const initClients = () => {
@@ -94,6 +96,7 @@ export async function generateContentWithGemini(newsGroups, aiClient) {
         });
     });
 
+
     const prompt = `
 You are an expert podcast producer and host.
 Target Audience: Tech-savvy, curious, bilingual (Chinese/English) listeners looking to improve their English.
@@ -106,12 +109,18 @@ TASK:
 1. Select the most interesting stories from the input.
 2. Create a JSON output.
 3. The 'script' fields MUST form a single COHERENT narrative when concatenated. 
-   - Use smooth transitions between categories. 
-   - Don't just list news; tell a story.
-   - Host personality: Friendly, insightful.
-   - Language: Mixed ~70% Chinese, ~30% English (LingDaily style).
-   - CRITICAL: For every complex English sentence or phrase used, immediately follow it with a brief Chinese explanation or translation to aid English learning.
-   - Total Script Length: Aim for ~3000-5000 characters/words (substantial depth).
+    **Narrative Arc:** Arrange the stories into a coherent flow. Use smooth transitional phrases to connect different topics (e.g., moving from geopolitics to technology).
+    **Language & Style (CRITICAL):**
+    *   **Primary Language:** **Chinese (Mandarin).** You must tell the story primarily in Chinese.
+    *   **English Usage:** Do **NOT** translate full sentences (e.g., do not say "Hello. 你好."). Instead, **"sprinkle"** high-value English words or short phrases into the Chinese sentences naturally.
+    *   **The "Contextual Method":** When introducing a specific English term:
+        *   Use the English word within the Chinese sentence structure.
+        *   Immediately follow it with a brief Chinese translation or explanation in parentheses or flow.
+    *   *Bad Example:* "The economy is slowing down. 经济正在放缓。" (Do not do this).
+    *   *Good Example:* "最近的数据显示，全球经济正在经历明显的 **downturn**（低迷期）。这种 **sluggish**（迟缓的）增长速度让很多投资者感到 **apprehensive** (忧虑)。"
+    **Fixed Intro:** The first item in the JSON must ALWAYS use the following standard opening in the script:
+    *   "大家好，欢迎来到 Daily News Deep Dive。在这里，我们不仅解读世界，更帮助你在新闻语境中积累地道的英语词汇。让我们直接进入今天的头条。"
+    **Headlines:** The newstitle field must be a catchy headline in **Chinese**.
    
 OUTPUT FORMAT (JSON ARRAY):
 [
@@ -176,9 +185,14 @@ OUTPUT FORMAT (JSON ARRAY):
 /**
  * STEP 3a: GEMINI AUDIO
  */
-export async function generateAudioGemini(text, aiClient) {
+export async function generateAudioGemini(input, aiClient) {
     if (!aiClient) {
         aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
+
+    const segments = normalizeGeminiSegments(input);
+    if (segments.length === 0) {
+        throw new Error("Gemini TTS input text is empty");
     }
 
     const config = {
@@ -192,44 +206,69 @@ export async function generateAudioGemini(text, aiClient) {
             }
         },
     };
-    const model = 'gemini-2.5-pro-preview-tts';
-    const contents = [
-        {
-            role: 'user',
-            parts: [{ text: text }],
-        },
-    ];
+    const model = 'gemini-2.5-flash-preview-tts';
+    const maxChunkChars = 3500;
+    const rpmLimit = 10;
+    const minIntervalMs = Math.ceil(60000 / rpmLimit);
+    const maxRetries = 2;
+    const waitForRateLimit = createRateLimiter(minIntervalMs);
 
     let accumulatedRawData = [];
-    let streamEnded = false;
+    let streamEnded = true;
     let mimeType = ''; // Will capture from first chunk
+    let chunkSilenceBuffer = null;
+    let segmentSilenceBuffer = null;
 
-    console.log(">>> Starting Gemini TTS Stream...");
+    for (let s = 0; s < segments.length; s++) {
+        const segmentText = segments[s];
+        const textChunks = splitTextIntoChunks(segmentText, maxChunkChars);
 
-    try {
-        const response = await aiClient.models.generateContentStream({
-            model,
-            config,
-            contents,
-        });
+        for (let i = 0; i < textChunks.length; i++) {
+            console.log(`>>> Starting Gemini TTS Stream (Segment ${s + 1}/${segments.length}, Chunk ${i + 1}/${textChunks.length})...`);
 
-        for await (const chunk of response) {
-            if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
-                const inlineData = chunk.candidates[0].content.parts[0].inlineData;
-                if (!mimeType && inlineData.mimeType) {
-                    mimeType = inlineData.mimeType;
+            const chunkText = textChunks[i];
+            const {
+                rawData,
+                mimeType: chunkMimeType,
+                streamEnded: chunkStreamEnded
+            } = await streamGeminiTtsChunkWithRetry(
+                chunkText,
+                aiClient,
+                model,
+                config,
+                maxRetries,
+                waitForRateLimit
+            );
+
+            if (rawData.length === 0) {
+                throw new Error(`Gemini TTS returned no audio data for segment ${s + 1}/${segments.length}, chunk ${i + 1}/${textChunks.length}`);
+            }
+
+            if (!mimeType && chunkMimeType) {
+                mimeType = chunkMimeType;
+            } else if (chunkMimeType && mimeType && chunkMimeType !== mimeType) {
+                console.warn(`Gemini TTS mimeType changed across chunks: ${mimeType} -> ${chunkMimeType}. Using the first value.`);
+            }
+
+            accumulatedRawData.push(...rawData);
+            streamEnded = streamEnded && chunkStreamEnded;
+
+            if (i < textChunks.length - 1) {
+                if (!chunkSilenceBuffer) {
+                    const audioOptions = parseMimeType(mimeType || 'audio/pcm; rate=24000');
+                    chunkSilenceBuffer = createSilenceBuffer(audioOptions, 0.2);
                 }
-                const chunkBuffer = Buffer.from(inlineData.data || '', 'base64');
-                accumulatedRawData.push(chunkBuffer);
-            } else {
-                // If text is returned (unlikely with AUDIO modality only, but possible on error/finish)
-                if (chunk.text) console.log("Gemini Stream Text:", chunk.text);
+                accumulatedRawData.push(chunkSilenceBuffer);
             }
         }
-        streamEnded = true;
-    } catch (e) {
-        console.error("Gemini TTS Stream Interrupted:", e);
-        // We continue to process whatever audio we captured
+
+        if (s < segments.length - 1) {
+            if (!segmentSilenceBuffer) {
+                const audioOptions = parseMimeType(mimeType || 'audio/pcm; rate=24000');
+                segmentSilenceBuffer = createSilenceBuffer(audioOptions, 0.4);
+            }
+            accumulatedRawData.push(segmentSilenceBuffer);
+        }
     }
 
     if (accumulatedRawData.length === 0) {
@@ -253,7 +292,261 @@ export async function generateAudioGemini(text, aiClient) {
     };
 }
 
-// --- Helpers for WAV Conversion (Reference from User) ---
+// --- Helpers for Gemini TTS and WAV conversion ---
+
+function normalizeGeminiSegments(input) {
+    if (Array.isArray(input)) {
+        const segments = input
+            .map((item, index) => {
+                if (typeof item === 'string') {
+                    return { text: item, order: index, index };
+                }
+                if (item && typeof item === 'object') {
+                    const script = typeof item.script === 'string'
+                        ? item.script
+                        : (typeof item.text === 'string' ? item.text : '');
+                    const rawOrder = Number(item.order);
+                    const order = Number.isFinite(rawOrder) ? rawOrder : index;
+                    return { text: script, order, index };
+                }
+                return null;
+            })
+            .filter(Boolean)
+            .map(segment => ({
+                ...segment,
+                text: segment.text.replace(/\r\n/g, '\n').trim()
+            }))
+            .filter(segment => segment.text.length > 0);
+
+        segments.sort((a, b) => (a.order - b.order) || (a.index - b.index));
+
+        return segments.map(segment => segment.text);
+    }
+
+    if (typeof input === 'string') {
+        const normalized = input.replace(/\r\n/g, '\n').trim();
+        return normalized ? [normalized] : [];
+    }
+
+    return [];
+}
+
+function createRateLimiter(minIntervalMs) {
+    let lastRequestAt = 0;
+
+    return async () => {
+        const now = Date.now();
+        const waitMs = Math.max(0, lastRequestAt + minIntervalMs - now);
+        if (waitMs > 0) {
+            await sleep(waitMs);
+        }
+        lastRequestAt = Date.now();
+    };
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function streamGeminiTtsChunkWithRetry(text, aiClient, model, config, maxRetries, waitForRateLimit) {
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt <= maxRetries) {
+        await waitForRateLimit();
+
+        const result = await streamGeminiTtsChunk(text, aiClient, model, config);
+        if (result.rawData.length > 0) {
+            return result;
+        }
+
+        lastError = new Error("Gemini TTS returned no audio data");
+        attempt += 1;
+
+        if (attempt <= maxRetries) {
+            const backoffMs = attempt === 1 ? 2000 : 5000;
+            console.warn(`Gemini TTS empty response, retrying (attempt ${attempt}/${maxRetries + 1}) after ${backoffMs}ms...`);
+            await sleep(backoffMs);
+        }
+    }
+
+    throw lastError;
+}
+
+async function streamGeminiTtsChunk(text, aiClient, model, config) {
+    const contents = [
+        {
+            role: 'user',
+            parts: [{ text }],
+        },
+    ];
+
+    let rawData = [];
+    let streamEnded = false;
+    let mimeType = '';
+
+    try {
+        const response = await aiClient.models.generateContentStream({
+            model,
+            config,
+            contents,
+        });
+
+        for await (const chunk of response) {
+            if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+                const inlineData = chunk.candidates[0].content.parts[0].inlineData;
+                if (!mimeType && inlineData.mimeType) {
+                    mimeType = inlineData.mimeType;
+                }
+                if (inlineData.data) {
+                    rawData.push(Buffer.from(inlineData.data, 'base64'));
+                }
+            } else {
+                if (chunk.text) console.log("Gemini Stream Text:", chunk.text);
+            }
+        }
+        streamEnded = true;
+    } catch (e) {
+        console.error("Gemini TTS Stream Interrupted:", e);
+        // We continue to process whatever audio we captured
+    }
+
+    return { rawData, mimeType, streamEnded };
+}
+
+function splitTextIntoChunks(text, maxChars) {
+    const paragraphs = text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    const chunks = [];
+    let current = '';
+
+    const pushCurrent = () => {
+        if (current.trim()) {
+            chunks.push(current.trim());
+        }
+        current = '';
+    };
+
+    for (const paragraph of paragraphs) {
+        if (paragraph.length > maxChars) {
+            pushCurrent();
+            const sentences = splitIntoSentences(paragraph);
+            let buffer = '';
+            for (const sentence of sentences) {
+                if (sentence.length > maxChars) {
+                    const parts = splitOverlongText(sentence, maxChars);
+                    for (const part of parts) {
+                        if (!buffer) {
+                            buffer = part;
+                        } else if (buffer.length + part.length + 1 <= maxChars) {
+                            buffer += ` ${part}`;
+                        } else {
+                            chunks.push(buffer.trim());
+                            buffer = part;
+                        }
+                    }
+                    continue;
+                }
+
+                if (!buffer) {
+                    buffer = sentence;
+                } else if (buffer.length + sentence.length + 1 <= maxChars) {
+                    buffer += ` ${sentence}`;
+                } else {
+                    chunks.push(buffer.trim());
+                    buffer = sentence;
+                }
+            }
+            if (buffer.trim()) {
+                chunks.push(buffer.trim());
+            }
+            continue;
+        }
+
+        if (!current) {
+            current = paragraph;
+        } else if (current.length + paragraph.length + 2 <= maxChars) {
+            current += `\n\n${paragraph}`;
+        } else {
+            pushCurrent();
+            current = paragraph;
+        }
+    }
+
+    pushCurrent();
+
+    if (chunks.length > 1) {
+        const last = chunks[chunks.length - 1];
+        const secondLast = chunks[chunks.length - 2];
+        if (last.length < Math.floor(maxChars * 0.35) && secondLast.length + last.length + 2 <= maxChars) {
+            chunks[chunks.length - 2] = `${secondLast}\n\n${last}`;
+            chunks.pop();
+        }
+    }
+
+    return chunks;
+}
+
+function splitIntoSentences(text) {
+    const endChars = new Set(['.', '!', '?', ';', '。', '！', '？', '；']);
+    const sentences = [];
+    let buffer = '';
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        buffer += ch;
+
+        if (endChars.has(ch)) {
+            const next = text[i + 1] || '';
+            if (next === '' || /\s/.test(next)) {
+                if (buffer.trim()) {
+                    sentences.push(buffer.trim());
+                }
+                buffer = '';
+            }
+        }
+    }
+
+    if (buffer.trim()) {
+        sentences.push(buffer.trim());
+    }
+
+    return sentences;
+}
+
+function splitOverlongText(text, maxChars) {
+    const parts = [];
+    let remaining = text.trim();
+
+    while (remaining.length > maxChars) {
+        let cut = remaining.lastIndexOf(' ', maxChars);
+        if (cut < Math.floor(maxChars * 0.6)) {
+            cut = remaining.lastIndexOf('\n', maxChars);
+        }
+        if (cut < Math.floor(maxChars * 0.6)) {
+            cut = maxChars;
+        }
+
+        parts.push(remaining.slice(0, cut).trim());
+        remaining = remaining.slice(cut).trim();
+    }
+
+    if (remaining) {
+        parts.push(remaining);
+    }
+
+    return parts;
+}
+
+function createSilenceBuffer(options, durationSeconds) {
+    const numChannels = options.numChannels || 1;
+    const sampleRate = options.sampleRate || 24000;
+    const bitsPerSample = options.bitsPerSample || 16;
+    const bytesPerSample = bitsPerSample / 8;
+    const frameCount = Math.max(1, Math.floor(sampleRate * durationSeconds));
+    const totalBytes = frameCount * numChannels * bytesPerSample;
+
+    return Buffer.alloc(totalBytes, 0);
+}
 
 function convertToWav(rawBuffer, mimeType) {
     const options = parseMimeType(mimeType);
@@ -352,6 +645,21 @@ export async function generateAudioElevenLabs(text, config) {
 
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
+}
+
+/**
+ * STEP 3c: SAVE AUDIO LOCALLY
+ */
+export async function saveAudioLocally(key, buffer) {
+    const baseDir = process.env.PODCAST_AUDIO_TMP_DIR
+        || path.join(process.cwd(), 'tmp', 'podcast-audio');
+    const cleanKey = key.replace(/^[/\\]+/, '');
+    const filePath = path.join(baseDir, cleanKey);
+
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, buffer);
+
+    return filePath;
 }
 
 /**

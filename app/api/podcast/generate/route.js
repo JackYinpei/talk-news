@@ -7,6 +7,7 @@ import {
     generateContentWithGemini,
     generateAudioElevenLabs,
     generateAudioGemini,
+    saveAudioLocally,
     uploadToR2,
     estimateDuration
 } from '@/app/lib/podcastWorkflow';
@@ -135,7 +136,10 @@ async function runGenerationPipeline(dateFolder, existingState = null) {
 
     try {
         if (ttsProvider === 'gemini') {
-            const audioResult = await generateAudioGemini(content.fullScript, ai);
+            const geminiInput = Array.isArray(content.items) && content.items.length
+                ? content.items
+                : content.fullScript;
+            const audioResult = await generateAudioGemini(geminiInput, ai);
             audioBuffer = audioResult.buffer;
             contentType = 'audio/wav';
             fileExtension = 'wav';
@@ -160,9 +164,24 @@ async function runGenerationPipeline(dateFolder, existingState = null) {
 
     // D. Upload to R2
     const fileName = `${dateFolder}/daily_digest_${uuidv4()}.${fileExtension}`;
+    let localAudioPath;
+
+    try {
+        localAudioPath = await saveAudioLocally(fileName, audioBuffer);
+        console.log(">>> Audio saved locally:", localAudioPath);
+    } catch (err) {
+        console.error(">>> Local Audio Save Failed:", err);
+        throw new Error(`Local audio save failed: ${err.message}`);
+    }
 
     // Pass s3Client and contentType
-    const audioUrl = await uploadToR2(fileName, audioBuffer, s3Client, contentType);
+    let audioUrl;
+    try {
+        audioUrl = await uploadToR2(fileName, audioBuffer, s3Client, contentType);
+    } catch (err) {
+        console.error(">>> Audio Upload Failed:", err);
+        throw new Error(`Audio Upload Failed: ${err.message}. Local backup: ${localAudioPath}`);
+    }
     console.log(">>> Audio Uploaded to R2:", audioUrl);
 
     // E. Return structured data for DB
