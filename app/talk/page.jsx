@@ -11,6 +11,7 @@ import { History } from "@/app/components/History";
 import { CombineInitPrompt } from '@/lib/utils';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { GeminiLiveServiceImpl } from '@/app/lib/GeminiLiveService';
+import { OpenAILiveServiceImpl } from '@/app/lib/OpenAILiveService';
 
 function buildInstructions(lang, nativeLabel, targetLabel) {
     if (lang === 'en') {
@@ -433,9 +434,9 @@ export default function Home() {
         });
     }, [scheduleConversationPersist]);
 
-    const initService = useCallback(() => {
+    const initService = useCallback((provider) => {
         if (!serviceRef.current) {
-            serviceRef.current = new GeminiLiveServiceImpl({
+            const config = {
                 onMessage: handleGeminiMessage,
                 onConnectionUpdate: (connected) => {
                     setIsConnected(connected);
@@ -449,7 +450,13 @@ export default function Home() {
                     setIsConnected(false);
                     setIsConnecting(false);
                 }
-            });
+            };
+
+            if (provider === 'openai') {
+                serviceRef.current = new OpenAILiveServiceImpl(config);
+            } else {
+                serviceRef.current = new GeminiLiveServiceImpl(config);
+            }
         }
     }, [handleGeminiMessage]);
 
@@ -463,20 +470,22 @@ export default function Home() {
             setIsConnecting(true);
             // Fetch ephemeral token
             let token;
+            let provider;
             try {
-                const res = await fetch('/api/gemini-token', { method: 'POST' });
+                const res = await fetch('/api/realtime-token', { method: 'POST' });
                 const data = await res.json();
                 if (!res.ok || !data.token) {
                     throw new Error(data.error || "Failed to get access token");
                 }
                 token = data.token;
+                provider = data.provider;
             } catch (e) {
                 setError("Connection Failed: " + e.message);
                 setIsConnecting(false);
                 return;
             }
 
-            initService();
+            initService(provider);
 
             // Build Context Prompt
             const baseInstructions = buildInstructions(

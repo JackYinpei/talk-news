@@ -50,7 +50,8 @@ export async function POST() {
         }
 
         // Prefer server-side keys
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        const rawApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        const apiKey = rawApiKey ? rawApiKey.trim() : "";
 
         if (!apiKey) {
             return NextResponse.json({ error: 'Server API key not configured' }, { status: 500 });
