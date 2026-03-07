@@ -1,17 +1,1 @@
-name: Generate Daily Podcasts
 
-on:
-  schedule:
-    # 每天 UTC 22:00 (北京时间 14:00)
-    - cron: '0 22 * * *'
-  workflow_dispatch:  # 允许手动触发
-
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger podcast generation
-        run: |
-          curl "${{ secrets.APP_URL }}/api/podcast/generate" \
-            --max-time 600 \
-            -H "Content-Type: application/json"
