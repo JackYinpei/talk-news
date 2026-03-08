@@ -1,5 +1,4 @@
 import { auth } from "@/app/auth"
-import { fal } from "@fal-ai/client"
 
 export const runtime = 'nodejs'
 
@@ -102,20 +101,30 @@ export async function POST(req) {
       return new Response(JSON.stringify({ ok: true, status: "exists", url, key: objectKey }), { status: 200 })
     }
 
-    // 2) Generate with FAL AI (gpt-image-1-mini)
-    fal.config({ credentials: process.env.FAL_KEY })
+    // 2) Generate with FAL AI (gpt-image-1-mini) via REST API
     const prompt = buildPrompt(word)
 
-    const result = await fal.subscribe("fal-ai/gpt-image-1-mini", {
-      input: {
+    const falResponse = await fetch("https://fal.run/fal-ai/gpt-image-1-mini", {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${process.env.FAL_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
         prompt,
         num_images: 1,
-        output_format: "png",
-      },
-      logs: false,
+        output_format: "png"
+      })
     })
 
-    const img = Array.isArray(result?.data?.images) ? result.data.images[0] : null
+    if (!falResponse.ok) {
+      const errTxt = await falResponse.text().catch(() => "")
+      return new Response(JSON.stringify({ error: `Fal AI error: ${falResponse.status} ${errTxt}` }), { status: 502 })
+    }
+
+    const result = await falResponse.json()
+
+    const img = Array.isArray(result?.images) ? result.images[0] : null
     const imgUrl = img?.url
     if (!imgUrl) {
       return new Response(JSON.stringify({ error: "No image returned from model" }), { status: 502 })
