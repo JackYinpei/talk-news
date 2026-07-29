@@ -2,6 +2,7 @@
 // chunk can be synthesized independently without losing the bilingual rhythm.
 
 import { createServerGeminiClient } from "@/app/lib/server/geminiConfig";
+import { backoffDelay, isRetryableApiError, sleep } from "./retry.js";
 
 export const HOST_A = "LL";
 export const HOST_B = "DD";
@@ -27,8 +28,6 @@ const SCRIPT_MODELS = [PRIMARY_MODEL, FALLBACK_MODEL].filter(
 const MAX_TRANSIENT_RETRIES = 4;
 const TRANSIENT_RETRIES_BEFORE_FALLBACK = 2;
 const MAX_VALIDATION_RETRIES = 1;
-const RETRY_BASE_DELAY_MS = 1500;
-const RETRY_MAX_DELAY_MS = 15000;
 
 export const SYSTEM_PROMPT = `You are a senior producer writing a daily news podcast called "成杨英语日刊" for Chinese learners of English.
 
@@ -127,11 +126,11 @@ function requireString(value, field) {
   return value.trim();
 }
 
-function countHanCharacters(text) {
+export function countHanCharacters(text) {
   return String(text || "").match(/[\u3400-\u9FFF]/gu)?.length || 0;
 }
 
-function countLatinWords(text) {
+export function countLatinWords(text) {
   return String(text || "").match(/\p{Script=Latin}[\p{Script=Latin}'’-]*/gu)?.length || 0;
 }
 
@@ -347,34 +346,6 @@ function parseScriptResponse(raw) {
   } catch (error) {
     throw new Error(`Script model returned invalid JSON: ${error.message}`);
   }
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Exponential backoff with jitter so simultaneous overloaded requests don't all
-// retry in lockstep and re-congest the model.
-function backoffDelay(retryNumber) {
-  const capped = Math.min(RETRY_BASE_DELAY_MS * 2 ** (retryNumber - 1), RETRY_MAX_DELAY_MS);
-  return capped / 2 + Math.random() * (capped / 2);
-}
-
-const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
-const RETRYABLE_STATUS_PATTERN = /\b(?:unavailable|resource_exhausted|internal|overloaded|deadline)\b|high demand|try again|econnreset|etimedout|fetch failed|socket hang up|network error/i;
-
-// Distinguish transient upstream failures (503 "high demand", 429 rate limits,
-// 5xx, network blips) from parse/validation errors. Only transient failures are
-// worth retrying with the same input or failing over to another model; a
-// parseable-but-invalid script instead earns a targeted correction retry.
-function isRetryableApiError(error) {
-  if (!error) return false;
-  const status = error.status ?? error.code ?? error?.error?.code;
-  if (typeof status === "number" && RETRYABLE_STATUS_CODES.has(status)) return true;
-  const message = error instanceof Error ? error.message : String(error);
-  const codeMatch = message.match(/"code"\s*:\s*(\d{3})/);
-  if (codeMatch && RETRYABLE_STATUS_CODES.has(Number(codeMatch[1]))) return true;
-  return RETRYABLE_STATUS_PATTERN.test(message);
 }
 
 function buildContents(userMessage, previousRaw, validationError) {

@@ -1,8 +1,18 @@
 // Fetch and parse Kagi RSS for the podcast pipeline.
 // Keeps to the top N items per category, stripping HTML from descriptions.
 
+import { backoffDelay, sleep } from "./retry.js";
+
 const KAGI_CATEGORIES = ["world", "tech", "business"];
 const PER_CATEGORY = 3;
+
+// One 5xx or network blip at 05:00 used to kill the whole day's episode, so
+// every category now gets a few backoff retries. A category that still has no
+// items after that fails the run: letting the script model improvise a news
+// block with no source items would put invented "news" on air, which is worse
+// than letting cron retry the generation.
+const FETCH_ATTEMPTS = 4;
+const FETCH_TIMEOUT_MS = 20000;
 
 function decodeEntities(s) {
   return s
@@ -47,20 +57,39 @@ async function fetchCategory(category) {
     redirect: "follow",
     cache: "no-store",
     headers: { "User-Agent": "LingDaily/1.0 (+https://lingdaily.ai)" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Kagi ${category} upstream ${res.status}`);
   const xml = await res.text();
-  return parseItems(xml).slice(0, PER_CATEGORY);
+  const items = parseItems(xml).slice(0, PER_CATEGORY);
+  if (items.length === 0) throw new Error(`Kagi ${category} feed returned no items`);
+  return items;
+}
+
+async function fetchCategoryWithRetry(category) {
+  let lastError;
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetchCategory(category);
+    } catch (error) {
+      lastError = error;
+      if (attempt < FETCH_ATTEMPTS) {
+        console.warn(
+          `[podcast/news] Kagi ${category} fetch failed (attempt ${attempt}/${FETCH_ATTEMPTS}): ${error?.message || error}`,
+        );
+        await sleep(backoffDelay(attempt));
+      }
+    }
+  }
+  const message = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(`Kagi ${category} failed after ${FETCH_ATTEMPTS} attempts: ${message}`);
 }
 
 export async function fetchPodcastNews() {
-  const results = await Promise.all(
-    KAGI_CATEGORIES.map(async (category) => {
-      const items = await fetchCategory(category);
-      return { category, items };
-    })
+  return Promise.all(
+    KAGI_CATEGORIES.map(async (category) => ({
+      category,
+      items: await fetchCategoryWithRetry(category),
+    })),
   );
-  const total = results.reduce((sum, r) => sum + r.items.length, 0);
-  if (total === 0) throw new Error("No news items fetched from Kagi");
-  return results;
 }

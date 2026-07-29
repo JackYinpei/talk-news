@@ -165,8 +165,12 @@ Live 声明两个 tool，都遵循“先立即回 `accepted`，再异步处理�
 1. 服务器 crontab 调 `POST /api/podcast/generate`。
 2. RPC `claim_podcast_generation` 获取 `(date_folder, daily)` 租约；DB/RPC 不可用时
    退回本地 manifest 兼容模式。
-3. 抓取 world/tech/business 新闻，调 Gemini 生成严格 JSON 脚本。
-4. 对 intro/world/tech/business/outro 五个 chunk 分别调 Gemini multi-speaker TTS。
+3. 抓取 world/tech/business 新闻（每类目最多 4 次退避重试；任一类目最终为空则
+   整次失败，避免模型凭空编新闻），调 Gemini 生成严格 JSON 脚本。
+4. 对 intro/world/tech/business/outro 五个 chunk 分别调 Gemini multi-speaker TTS：
+   拼接响应内全部音频 part、裁剪首尾静音，并按文稿估算时长校验（约 0.5x–1.6x
+   窗口）；校验失败或过载会退避重试，并在必要时降级到稳定 TTS 模型
+   （`PODCAST_TTS_MODEL` / `PODCAST_TTS_FALLBACK_MODEL` 可覆盖）。
 5. PCM 在 Node 内用 lamejs 编码为 96 kbps MP3，不依赖 ffmpeg。
 6. MP3 上传 COS，DB 更新为 `completed`，再尽力更新本地 TXT/MP3/manifest/RSS 镜像。
 
