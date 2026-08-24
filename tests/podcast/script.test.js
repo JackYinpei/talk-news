@@ -8,6 +8,7 @@ import { createServerGeminiClient } from "@/app/lib/server/geminiConfig";
 import {
   generatePodcastScript,
   normalizePodcastScript,
+  SYSTEM_PROMPT,
   validatePodcastScript,
 } from "@/app/lib/podcast/script";
 
@@ -113,8 +114,26 @@ describe("podcast script validation", () => {
     );
 
     expect(() => validatePodcastScript(oddPairCount)).toThrow(
-      /intro must contain an even number of pairs/,
+      /intro must contain exactly 2 pairs/,
     );
+  });
+
+  it("keeps the intro and outro short", () => {
+    const longIntro = validScript();
+    longIntro.chunks[0].turns.push(...pairedTurns("更多开场预告"));
+    expect(() => validatePodcastScript(longIntro)).toThrow(/intro must contain exactly 2 pairs/);
+
+    const longOutro = validScript();
+    longOutro.chunks[4].turns.unshift(...pairedTurns("本期回顾"));
+    expect(() => validatePodcastScript(longOutro)).toThrow(/outro must contain exactly 1 pair/);
+  });
+
+  it("tells the writer to enter the news quickly and use only a simple sign-off", () => {
+    expect(SYSTEM_PROMPT).toContain("intro: use EXACTLY 2 complete pairs");
+    expect(SYSTEM_PROMPT).toContain("Do not introduce the hosts");
+    expect(SYSTEM_PROMPT).toContain("outro: use EXACTLY 1 complete pair");
+    expect(SYSTEM_PROMPT).toContain("Do not recap the news");
+    expect(SYSTEM_PROMPT).toContain("compare learning English with following the news");
   });
 
   it("rejects repeated or early farewell wording", () => {
@@ -161,6 +180,13 @@ describe("podcast script generation", () => {
     expect(result.episode_summary).toContain("\n\n");
     expect(generateContent).toHaveBeenCalledTimes(2);
     expect(generateContent.mock.calls[0][0].config.responseMimeType).toBe("application/json");
+    expect(generateContent.mock.calls[0][0].model).toBe("gemini-3.7-flash");
+    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("temperature");
+    expect(generateContent.mock.calls[0][0].config.thinkingConfig).toEqual({
+      thinkingLevel: "medium",
+    });
+    expect(generateContent.mock.calls[1][0].contents).toHaveLength(1);
+    expect(generateContent.mock.calls[1][0].contents[0].role).toBe("user");
     expect(generateContent.mock.calls[1][0].contents.at(-1).parts[0].text).toContain(
       "failed validation",
     );
@@ -219,7 +245,7 @@ describe("podcast script generation", () => {
     }
   });
 
-  it("fails over to the stable model when the preview stays overloaded", async () => {
+  it("fails over to the fallback model when the primary stays overloaded", async () => {
     vi.useFakeTimers();
     try {
       const overload = Object.assign(new Error("model is experiencing high demand"), { status: 503 });
@@ -236,8 +262,11 @@ describe("podcast script generation", () => {
       expect(result.episode_summary).toContain("\n\n");
       expect(generateContent).toHaveBeenCalledTimes(3);
       const models = generateContent.mock.calls.map((call) => call[0].model);
-      expect(models[0]).toBe("gemini-3-flash-preview");
+      expect(models[0]).toBe("gemini-3.7-flash");
       expect(models[2]).toBe("gemini-2.5-flash");
+      expect(generateContent.mock.calls[2][0].config.thinkingConfig).toEqual({
+        thinkingBudget: 4000,
+      });
     } finally {
       vi.useRealTimers();
     }

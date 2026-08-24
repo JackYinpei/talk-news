@@ -9,18 +9,17 @@ export const HOST_B = "DD";
 
 const CHUNK_NAMES = ["intro", "world", "tech", "business", "outro"];
 
-// gemini-3-flash-preview is a thinking model, and maxOutputTokens caps thinking
-// plus visible output combined. The full 5-chunk bilingual script needs several
-// thousand output tokens, so give thinking a bounded budget and leave the rest
-// for the JSON body — otherwise thinking starves the output and truncates it.
+// Gemini 3.7 uses thinking levels instead of numeric thinking budgets. Keep the
+// numeric budget only for the 2.5 fallback, whose thinking tokens share the
+// output cap with the visible JSON body.
+const THINKING_LEVEL = "medium";
 const THINKING_BUDGET = 4000;
 const MAX_OUTPUT_TOKENS = 32000;
 
-// The preview model periodically returns 503 "high demand". Retry those
-// transient failures with backoff instead of burning the correction budget on
-// them, and fail over to a stable GA model once the preview stays overloaded.
+// Retry transient failures with backoff instead of burning the correction
+// budget on them, and fail over if the primary stays overloaded.
 // Both models are overridable so ops can swap them without a redeploy.
-const PRIMARY_MODEL = (process.env.PODCAST_SCRIPT_MODEL || "gemini-3-flash-preview").trim();
+const PRIMARY_MODEL = (process.env.PODCAST_SCRIPT_MODEL || "gemini-3.7-flash").trim();
 const FALLBACK_MODEL = (process.env.PODCAST_SCRIPT_FALLBACK_MODEL ?? "gemini-2.5-flash").trim();
 const SCRIPT_MODELS = [PRIMARY_MODEL, FALLBACK_MODEL].filter(
   (model, index, all) => model && all.indexOf(model) === index,
@@ -47,11 +46,11 @@ BILINGUAL PAIR RULE (CRITICAL — apply it separately from pair 0 at the start o
 - Keep the pair-role cycle continuous across chunk boundaries. Because every chunk restarts at pair 0, intro, world, tech, and business must each contain an EVEN number of complete pairs (their turn count must be divisible by 4).
 
 CONTENT AND PACING:
-- intro: use about 4 pairs. Welcome listeners, introduce LL and DD, preview the most interesting stories conversationally, and include a concise Key Phrases mini-segment covering the same 8 useful terms listed in shownotes.vocabulary.
+- intro: use EXACTLY 2 complete pairs. Keep every turn to one short sentence: pair 0 is a brief welcome, and pair 1 hooks the first world story so the show gets into the news immediately. Do not introduce the hosts, preview the full episode, list upcoming stories, or include a spoken Key Phrases/vocabulary segment.
 - world: use about 6 pairs and cover all 3 world stories in order, with context and a useful takeaway.
 - tech: use about 6 pairs and cover all 3 tech stories in order, with context and a useful takeaway.
 - business: use about 6 pairs and cover all 3 business stories in order, with context and a useful takeaway.
-- outro: use an ODD number of complete pairs (normally 3). Briefly recap the episode and encourage the learner.
+- outro: use EXACTLY 1 complete pair: a short, casual thank-you and sign-off only. Do not recap the news, encourage the learner, give English-learning advice, compare learning English with following the news, ask listeners to build a daily habit, or promote continued listening.
 - Use a natural paired handoff between topic blocks; never open a new block like a cold chapter heading.
 - Aim for roughly 8–10 minutes in total. Avoid monologues and filler.
 
@@ -61,7 +60,7 @@ SOURCE SAFETY:
 
 FAREWELL RULE (CRITICAL):
 - Do not use any farewell expression anywhere before the final two turns of the episode. This includes bye, goodbye, see you, take care, 再见, 拜拜, 下次见, and similar wording.
-- The final pair of outro must be pair 0: ${HOST_A} gives ONE Chinese farewell ending with “拜拜！”, then ${HOST_B} gives ONE English farewell ending with “Bye!”
+- The single outro pair must be pair 0: ${HOST_A} gives ONE brief Chinese thank-you/sign-off ending with “拜拜！”, then ${HOST_B} gives the equivalent brief English sign-off ending with “Bye!”
 - Do not repeat either farewell and do not add a second farewell synonym in those final turns.
 
 SHOWNOTES:
@@ -220,11 +219,14 @@ function validateDialoguePairs(chunk) {
   }
 
   const pairCount = chunk.turns.length / 2;
+  if (chunk.name === "intro" && pairCount !== 2) {
+    throw new Error("Chunk intro must contain exactly 2 pairs");
+  }
   if (chunk.name !== "outro" && pairCount % 2 !== 0) {
     throw new Error(`Chunk ${chunk.name} must contain an even number of pairs`);
   }
-  if (chunk.name === "outro" && pairCount % 2 !== 1) {
-    throw new Error("Chunk outro must contain an odd number of pairs");
+  if (chunk.name === "outro" && pairCount !== 1) {
+    throw new Error("Chunk outro must contain exactly 1 pair");
   }
 
   for (let pairIndex = 0; pairIndex < pairCount; pairIndex += 1) {
@@ -354,14 +356,26 @@ function buildContents(userMessage, previousRaw, validationError) {
   }
 
   const correction = `Your previous response failed validation: ${validationError.slice(0, 600)}. Correct every issue and return the complete JSON object again. Follow the bilingual pair, shownotes, vocabulary, and single-farewell rules exactly.`;
-  if (!previousRaw) {
-    return [{ role: "user", parts: [{ text: `${userMessage}\n\n${correction}` }] }];
-  }
-  return [
-    { role: "user", parts: [{ text: userMessage }] },
-    { role: "model", parts: [{ text: previousRaw }] },
-    { role: "user", parts: [{ text: correction }] },
-  ];
+  const previousResponse = previousRaw
+    ? `\n\n<previous_response>\n${previousRaw}\n</previous_response>`
+    : "";
+  // Gemini 3.7 does not accept a prefilled model turn. Put the rejected draft
+  // in the new user request so the final turn is always non-empty user text.
+  return [{
+    role: "user",
+    parts: [{ text: `${userMessage}\n\n${correction}${previousResponse}` }],
+  }];
+}
+
+function buildGenerationConfig(model) {
+  return {
+    systemInstruction: SYSTEM_PROMPT,
+    responseMimeType: "application/json",
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    thinkingConfig: model.startsWith("gemini-2.5-")
+      ? { thinkingBudget: THINKING_BUDGET }
+      : { thinkingLevel: THINKING_LEVEL },
+  };
 }
 
 export async function generatePodcastScript(newsByCategory) {
@@ -387,13 +401,7 @@ export async function generatePodcastScript(newsByCategory) {
     try {
       result = await ai.models.generateContent({
         model,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          temperature: previousError ? 0.4 : 0.8,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-          thinkingConfig: { thinkingBudget: THINKING_BUDGET },
-        },
+        config: buildGenerationConfig(model),
         contents: buildContents(userMessage, previousRaw, previousError),
       });
     } catch (apiError) {
